@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DJ_PLAYLISTS Version="1.0.0">
+  <PRODUCT Name="rekordbox" Version="7.0.0" Company="AlphaTheta"/>
+  <COLLECTION Entries="32">
+    <TRACK TrackID="1" Name="Sample Track 01" Artist="Sample Artist B" Genre="Melodic Techno" TotalTime="350" AverageBpm="125.87" Tonality="C#m" Rating="0" Comments="Energy 8" Location="file://localhost/Users/demo/Music/Sample%20Track%2001.mp3"/>
+    <TRACK TrackID="2" Name="Sample Track 02" Artist="Sample Artist C" Genre="Tech House" TotalTime="405" AverageBpm="122.95" Tonality="Bm" Rating="0" Comments="Energy 5" Location="file://localhost/Users/demo/Music/Sample%20Track%2002.mp3"/>
+    <TRACK TrackID="3" Name="Sample Track 03" Artist="Sample Artist D" Genre="House" TotalTime="374" AverageBpm="118.71" Tonality="Dm" Rating="0" Comments="Energy 2" Location="file://localhost/Users/demo/Music/Sample%20Track%2003.mp3"/>
+    <TRACK TrackID="4" Name="Sample Track 04" Artist="Sample Artist E" Genre="Melodic Techno" TotalTime="327" AverageBpm="126.37" Tonality="F" Rating="0" Comments="Energy 9" Location="file://localhost/Users/demo/Music/Sample%20Track%2004.mp3"/>
+    <TRACK TrackID="5" Name="Sample Track 05" Artist="Sample Artist F" Genre="Techno" TotalTime="353" AverageBpm="122.41" Tonality="G" Rating="0" Comments="Energy 6" Location="file://localhost/Users/demo/Music/Sample%20Track%2005.mp3"/>
+    <TRACK TrackID="6" Name="Sample Track 06" Artist="Sample Artist G" Genre="House" TotalTime="370" AverageBpm="118.61" Tonality="Bm" Rating="0" Comments="" Location="file://localhost/Users/demo/Music/Sample%20Track%2006.mp3"/>
+    <TRACK TrackID="7" Name="Sample Track 07" Artist="Sample Artist H" Genre="Melodic Techno" TotalTime="315" AverageBpm="128.77" Tonality="Eb" Rating="0" Comments="Energy 10" Location="file://localhost/Users/demo/Music/Sample%20Track%2007.mp3"/>
+    <TRACK TrackID="8" Name="Sample Track 08" Artist="Sample Artist I" Genre="Techno" TotalTime="307" AverageBpm="126.44" Tonality="Eb" Rating="0" Comments="Energy 7" Location="file://localhost/Users/demo/Music/Sample%20Track%2008.mp3"/>
+    <TRACK TrackID="9" Name="Sample Track 09" Artist="Sample Artist A" Genre="Tech House" TotalTime="306" AverageBpm="121.43" Tonality="C" Rating="0" Comments="Energy 4" Location="file://localhost/Users/demo/Music/Sample%20Track%2009.mp3"/>
+    <TRACK TrackID="10" Name="Sample Track 10" Artist="Sample Artist B" Genre="Deep House" TotalTime="371" AverageBpm="118.73" Tonality="Em" Rating="0" Comments="Energy 1" Location="file://localhost/Users/demo/Music/Sample%20Track%2010.mp3"/>
+    <TRACK TrackID="11" Name="Sample Track 11" Artist="Sample Artist C" Genre="Melodic Techno" TotalTime="353" AverageBpm="127.48" Tonality="Cm" Rating="0" Comments="Energy 8" Location="file://localhost/Users/demo/Music/Sample%20Track%2011.mp3"/>
+    <TRACK TrackID="12" Name="Sample Track 12" Artist="Sample Artist D" Genre="Tech House" TotalTime="373" AverageBpm="121.43" Tonality="F#m" Rating="0" Comments="" Location="file://localhost/Users/demo/Music/Sample%20Track%2012.mp3"/>
+    <TRACK TrackID="13" Name="Sample Track 13" Artist="Sample Artist E" Genre="House" TotalTime="313" AverageBpm="118.03" Tonality="G#m" Rating="0" Comments="Energy 2" Location="file://localhost/Users/demo/Music/Sample%20Track%2013.mp3"/>
+    <TRACK TrackID="14" Name="Sample Track 14" Artist="Sample Artist F" Genre="Melodic Techno" TotalTime="347" AverageBpm="127.94" Tonality="D#m" Rating="0" Comments="Energy 9" Location="file://localhost/Users/demo/Music/Sample%20Track%2014.mp3"/>
+    <TRACK TrackID="15" Name="Sample Track 15" Artist="Sample Artist G" Genre="Techno" TotalTime="372" AverageBpm="122.59" Tonality="Bm" Rating="0" Comments="Energy 6" Location="file://localhost/Users/demo/Music/Sample%20Track%2015.mp3"/>
+    <TRACK TrackID="16" Name="Sample Track 16" Artist="Sample Artist H" Genre="House" TotalTime="363" AverageBpm="118.58" Tonality="D#m" Rating="0" Comments="Energy 3" Location="file://localhost/Users/demo/Music/Sample%20Track%2016.mp3"/>
+    <TRACK TrackID="17" Name="Sample Track 17" Artist="Sample Artist I" Genre="Melodic Techno" TotalTime="399" AverageBpm="129.54" Tonality="G" Rating="0" Comments="Energy 10" Location="file://localhost/Users/demo/Music/Sample%20Track%2017.mp3"/>
+    <TRACK TrackID="18" Name="Sample Track 18" Artist="Sample Artist A" Genre="Techno" TotalTime="418" AverageBpm="124.54" Tonality="Eb" Rating="0" Comments="" Location="file://localhost/Users/demo/Music/Sample%20Track%2018.mp3"/>
+    <TRACK TrackID="19" Name="Sample Track 19" Artist="Sample Artist B" Genre="Tech House" TotalTime="331" AverageBpm="121.06" Tonality="Cm" Rating="0" Comments="Energy 4" Location="file://localhost/Users/demo/Music/Sample%20Track%2019.mp3"/>
+    <TRACK TrackID="20" Name="Sample Track 20" Artist="Sample Artist C" Genre="Deep House" TotalTime="310" AverageBpm="118.18" Tonality="A#m" Rating="0" Comments="Energy 1" Location="file://localhost/Users/demo/Music/Sample%20Track%2020.mp3"/>
+    <TRACK TrackID="21" Name="Sample Track 21" Artist="Sample Artist D" Genre="Melodic Techno" TotalTime="363" AverageBpm="126.62" Tonality="F" Rating="0" Comments="Energy 8" Location="file://localhost/Users/demo/Music/Sample%20Track%2021.mp3"/>
+    <TRACK TrackID="22" Name="Sample Track 22" Artist="Sample Artist E" Genre="Tech House" TotalTime="336" AverageBpm="123.63" Tonality="D" Rating="0" Comments="Energy 5" Location="file://localhost/Users/demo/Music/Sample%20Track%2022.mp3"/>
+    <TRACK TrackID="23" Name="Sample Track 23" Artist="Sample Artist F" Genre="House" TotalTime="315" AverageBpm="118.93" Tonality="Bm" Rating="0" Comments="Energy 2" Location="file://localhost/Users/demo/Music/Sample%20Track%2023.mp3"/>
+    <TRACK TrackID="24" Name="Sample Track 24" Artist="Sample Artist G" Genre="Melodic Techno" TotalTime="396" AverageBpm="127.74" Tonality="G#m" Rating="0" Comments="" Location="file://localhost/Users/demo/Music/Sample%20Track%2024.mp3"/>
+    <TRACK TrackID="25" Name="Sample Track 25" Artist="Sample Artist H" Genre="Techno" TotalTime="353" AverageBpm="123.33" Tonality="A" Rating="0" Comments="Energy 6" Location="file://localhost/Users/demo/Music/Sample%20Track%2025.mp3"/>
+    <TRACK TrackID="26" Name="Sample Track 26" Artist="Sample Artist I" Genre="House" TotalTime="397" AverageBpm="118.52" Tonality="Bm" Rating="0" Comments="Energy 3" Location="file://localhost/Users/demo/Music/Sample%20Track%2026.mp3"/>
+    <TRACK TrackID="27" Name="Sample Track 27" Artist="Sample Artist A" Genre="Melodic Techno" TotalTime="343" AverageBpm="129.17" Tonality="Gm" Rating="0" Comments="Energy 10" Location="file://localhost/Users/demo/Music/Sample%20Track%2027.mp3"/>
+    <TRACK TrackID="28" Name="Sample Track 28" Artist="Sample Artist B" Genre="Techno" TotalTime="374" AverageBpm="125.69" Tonality="A" Rating="0" Comments="Energy 7" Location="file://localhost/Users/demo/Music/Sample%20Track%2028.mp3"/>
+    <TRACK TrackID="29" Name="Sample Track 29" Artist="Sample Artist C" Genre="Tech House" TotalTime="407" AverageBpm="122.09" Tonality="Bm" Rating="0" Comments="Energy 4" Location="file://localhost/Users/demo/Music/Sample%20Track%2029.mp3"/>
+    <TRACK TrackID="30" Name="Sample Track 30" Artist="Sample Artist D" Genre="Deep House" TotalTime="360" AverageBpm="116.08" Tonality="Fm" Rating="0" Comments="" Location="file://localhost/Users/demo/Music/Sample%20Track%2030.mp3"/>
+    <TRACK TrackID="31" Name="Sample Track 31" Artist="Sample Artist E" Genre="Melodic Techno" TotalTime="307" AverageBpm="126.99" Tonality="Bm" Rating="0" Comments="Energy 8" Location="file://localhost/Users/demo/Music/Sample%20Track%2031.mp3"/>
+    <TRACK TrackID="32" Name="Sample Track 32" Artist="Sample Artist F" Genre="Tech House" TotalTime="382" AverageBpm="123.19" Tonality="Cm" Rating="0" Comments="Energy 5" Location="file://localhost/Users/demo/Music/Sample%20Track%2032.mp3"/>
+  </COLLECTION>
+  <PLAYLISTS>
+    <NODE Type="0" Name="ROOT" Count="1">
+      <NODE Type="0" Name="Gigs" Count="1">
+        <NODE Name="Friday" Type="1" KeyType="0" Entries="24">
+          <TRACK Key="1"/>
+          <TRACK Key="2"/>
+          <TRACK Key="3"/>
+          <TRACK Key="4"/>
+          <TRACK Key="5"/>
+          <TRACK Key="6"/>
+          <TRACK Key="7"/>
+          <TRACK Key="8"/>
+          <TRACK Key="9"/>
+          <TRACK Key="10"/>
+          <TRACK Key="11"/>
+          <TRACK Key="12"/>
+          <TRACK Key="13"/>
+          <TRACK Key="14"/>
+          <TRACK Key="15"/>
+          <TRACK Key="16"/>
+          <TRACK Key="17"/>
+          <TRACK Key="18"/>
+          <TRACK Key="19"/>
+          <TRACK Key="20"/>
+          <TRACK Key="21"/>
+          <TRACK Key="22"/>
+          <TRACK Key="23"/>
+          <TRACK Key="24"/>
+        </NODE>
+      </NODE>
+    </NODE>
+  </PLAYLISTS>
+</DJ_PLAYLISTS>

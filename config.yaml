@@ -1,0 +1,81 @@
+# djnext configuration. Tweak these after test-mixing a generated set.
+
+# How much of each track you actually play, and how long two tracks overlap in a mix.
+timing:
+  max_play_seconds: 240      # play at most ~4 min of each track
+  mix_overlap_seconds: 30    # transition overlap between decks
+
+# BPM rules (DDJ-FLX4 tempo slider default range is +/-6%, +/-10% and +/-16% also available)
+bpm:
+  tolerance: 0.06
+  allow_half_double: true    # 70 BPM -> 140 BPM counts as compatible
+
+# Weights of each part of the transition cost (higher = matters more)
+weights:
+  key: 3.0          # harmonic mixing (Camelot); 3.0 keeps clashes rare, lower = more freedom
+  bpm: 1.0          # tempo jump
+  energy: 1.5       # distance from the target energy curve
+  direction: 0.7    # going the wrong way (down while building, up during the breather)
+  genre: 0.3        # genre jumps
+  artist: 1.0       # same artist played too recently
+artist_gap: 3       # tracks before the same artist may come back
+
+# beginner = simpler mixes: BEAT SYNC, short blends (max 16 bars), fewer knob moves, no loop rolls.
+# advanced = long blends (up to 32 bars), rolls, more EQ work.
+skill: beginner
+
+# Your style: which tracks are allowed into a set, and who gets a bonus.
+# Use --any-style on the command line to ignore this for one run.
+style:
+  bpm_min: 122            # tech house ~124-128, groovy techno ~128-134
+  bpm_max: 134
+  exclude_genres:         # matched as text inside the track's genre (lower-case)
+    - rock
+    - hip-hop
+    - hip hop
+    - rap
+    - pop
+    - r&b
+    - classical
+    - country
+    - metal
+    - jazz
+    - folk
+    - soundtrack
+    - ambient
+    - reggae
+    - indie
+  favourite_artists:      # matched inside "artist - title", so uploads by labels count too
+    - Omar+
+    - Cloonee
+    - Beltran
+    - Vintage Culture
+    - Max Styler
+  favourite_bonus: 0.5    # how much a favourite is preferred (same scale as the weights)
+
+# Moods ("what do you want to hear?"): built in are warmup, pregame, drunk, banging, afters, groovy_techno.
+# They only pick from your style below (BPM range + genres); tempo inside a mood is relative to that range.
+# To change them, copy the defaults from src/djnext/core/moods.py into a `moods:` section here and edit.
+# Each mood: bpm range, words (bonus), required_words, intensity/drop_share ranges, edit/vocal/long weights,
+# threshold (0..1, how well a track must fit) and curve (its energy shape).
+
+# Energy curves: points are (fraction of the set 0..1, energy 0..10).
+default_curve: classic-1h
+curves:
+  # "DJ Set Energy" cheat sheet: warm up -> build -> first peak -> breather -> final peak
+  classic-1h:
+    - [0.00, 1.5]
+    - [0.17, 4.0]
+    - [0.33, 6.5]
+    - [0.47, 8.8]
+    - [0.65, 5.3]
+    - [0.83, 6.6]
+    - [1.00, 8.8]
+  warmup:
+    - [0.00, 2.0]
+    - [1.00, 5.5]
+  peak-time:
+    - [0.00, 6.5]
+    - [0.30, 8.5]
+    - [0.60, 7.5]
+    - [1.00, 9.5]

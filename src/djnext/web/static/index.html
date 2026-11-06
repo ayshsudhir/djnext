@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>djnext</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <header>
+    <div class="brand">djnext <span>set builder for rekordbox</span></div>
+    <nav>
+      <button data-tab="make" class="active">Make a set</button>
+      <button data-tab="music">My music</button>
+      <button data-tab="discover">Discover</button>
+      <button data-tab="rate">Rate</button>
+      <button data-tab="settings">Settings</button>
+    </nav>
+  </header>
+
+  <main>
+    <div id="banner" class="banner hidden"></div>
+
+    <!-- MAKE A SET -->
+    <section id="tab-make" class="tab">
+      <div class="card">
+        <h2>What mood of music do you want?</h2>
+        <div id="moods" class="moods"><p class="muted">Sorting your music into moods…</p></div>
+      </div>
+
+      <div class="card" id="lists-card">
+        <h2>1. Pick your music</h2>
+        <p class="muted small" id="mood-hint"></p>
+        <div id="lists" class="lists"><p class="muted">Loading your library…</p></div>
+        <div class="row">
+          <label>Length
+            <select id="length">
+              <option value="30">30 min</option><option value="45">45 min</option>
+              <option value="60" selected>60 min</option><option value="90">90 min</option>
+              <option value="120">2 hours</option>
+            </select>
+          </label>
+          <label>Energy shape <select id="curve"></select></label>
+          <label class="check"><input type="checkbox" id="use-style" checked> Only my style <span class="muted" id="style-hint"></span></label>
+        </div>
+        <button id="make" class="primary">Make a set</button>
+        <span id="make-status" class="muted"></span>
+      </div>
+
+      <div id="result" class="hidden">
+        <div class="card">
+          <h2>2. Your set</h2>
+          <div id="chips" class="chips"></div>
+          <div class="chart-wrap"><canvas id="chart"></canvas></div>
+          <ul id="set-notes" class="small muted"></ul>
+        </div>
+
+        <div class="card">
+          <h2>3. Put it in rekordbox</h2>
+          <p class="muted">Creates the playlist under <b>Playlists → djnext</b> in rekordbox, with hot cues on the pads:
+            <b>E</b> = where to cue the track, <b>F</b> = its drop (swap the basses), <b>G</b> = start the next track here.
+            rekordbox has to be <b>closed</b> while this runs. Your library is backed up first.</p>
+          <div class="row">
+            <label>Playlist name <input id="set-name" placeholder="e.g. Friday warm-up"></label>
+            <label class="check"><input type="checkbox" id="with-cues" checked> Add hot cues</label>
+            <button id="push" class="primary">Send to rekordbox</button>
+          </div>
+          <div id="push-status"></div>
+        </div>
+
+        <div class="card">
+          <h2>4. Mix it: track by track</h2>
+          <p class="muted">Click a track to see when and how to mix into it.</p>
+          <div id="tracks"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MY MUSIC -->
+    <section id="tab-music" class="tab hidden">
+      <div class="card">
+        <h2>SoundCloud</h2>
+        <p class="muted">Paste your SoundCloud profile link (or username). This reads your likes and playlists: track lists only, nothing is downloaded. Only public lists are visible.</p>
+        <div class="row">
+          <input id="sc-user" placeholder="https://soundcloud.com/your-name">
+          <button id="sc-sync" class="primary">Sync</button>
+          <span id="sc-status" class="muted"></span>
+        </div>
+        <div id="sc-lists"></div>
+      </div>
+      <div class="card">
+        <h2>Mood playlists in rekordbox</h2>
+        <p class="muted">Creates one playlist per mood under <b>Playlists → djnext moods</b> (refreshed each time). rekordbox must be closed.</p>
+        <button id="moods-push">Create mood playlists</button>
+        <div id="moods-push-status"></div>
+      </div>
+      <div class="card">
+        <h2>Not analysed by rekordbox yet</h2>
+        <p class="muted">These tracks have no BPM or key yet. In rekordbox, open them from the SoundCloud section and add them to your collection (or load them on a deck once). Then press <b>Reload library</b>.</p>
+        <button id="reload">Reload library</button>
+        <button id="show-missing">Show the list</button>
+        <ol id="missing" class="small"></ol>
+      </div>
+      <div class="card">
+        <h2>Your rekordbox library</h2>
+        <div id="library" class="muted"></div>
+      </div>
+    </section>
+
+    <!-- DISCOVER -->
+    <section id="tab-discover" class="tab hidden">
+      <div class="card">
+        <h2>New tracks for you on SoundCloud</h2>
+        <p class="muted">Looks at SoundCloud's related tracks for your best tracks and searches your favourite artists, keeps
+          tracks that fit your genres, and ranks them. Nothing is downloaded.</p>
+        <p class="muted small"><b>To use them:</b> open a track and ♥ like it on SoundCloud → <b>My music → Sync</b> →
+          in rekordbox open SoundCloud → Likes, select the new tracks and add them to your collection (so rekordbox
+          analyses them) → <b>Reload library</b>. Then they're in your moods and sets.</p>
+        <button id="discover-run" class="primary">Find new tracks</button>
+        <span id="discover-status" class="muted"></span>
+        <div id="discover-list"></div>
+      </div>
+    </section>
+
+    <!-- RATE -->
+    <section id="tab-rate" class="tab hidden">
+      <div class="card">
+        <h2>How did it sound?</h2>
+        <p class="muted">After mixing the set, mark each transition. This is how the tool learns what works for your ears.</p>
+        <div id="rate-list"><p class="muted">Make a set first.</p></div>
+        <div class="row" id="rate-overall-row">
+          <label>Whole set
+            <select id="overall"><option value="0">–</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
+          </label>
+          <input id="overall-note" placeholder="Anything about the set as a whole?">
+          <button id="rate-save" class="primary">Save ratings</button>
+          <span id="rate-status" class="muted"></span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>What your ratings say</h2>
+        <div id="feedback" class="muted">No ratings yet.</div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="tab-settings" class="tab hidden">
+      <div class="card">
+        <h2>My style</h2>
+        <div class="row">
+          <label>Mixing level
+            <select id="skill"><option value="beginner">Beginner: simple, short mixes</option><option value="advanced">Advanced: long blends, rolls</option></select>
+          </label>
+        </div>
+        <div class="row">
+          <label>Lowest BPM <input id="bpm-min" type="number" step="1"></label>
+          <label>Highest BPM <input id="bpm-max" type="number" step="1"></label>
+        </div>
+        <label class="block">Favourite artists (one per line; they get a bonus)
+          <textarea id="favs" rows="6"></textarea></label>
+        <label class="block">Genres to leave out (one per line)
+          <textarea id="excl" rows="6"></textarea></label>
+        <button id="save-style" class="primary">Save</button>
+        <span id="style-status" class="muted"></span>
+      </div>
+      <div class="card">
+        <h2>Undo last change</h2>
+        <p class="muted">Puts your rekordbox library back exactly as it was before djnext's last change (playlist, cues
+          or mood playlists). Every change is backed up first. rekordbox must be closed.</p>
+        <button id="undo">Undo last change</button>
+        <span id="undo-status" class="muted"></span>
+      </div>
+      <div class="card">
+        <h2>Hot cues</h2>
+        <p class="muted">Remove every hot cue this tool added (your own cues stay). rekordbox must be closed.</p>
+        <button id="remove-cues">Remove djnext cues</button>
+        <span id="cues-status" class="muted"></span>
+      </div>
+      <div class="card">
+        <h2>Tip: energy</h2>
+        <p class="muted">Star-rate tracks in rekordbox (1★ chill … 5★ peak-time) or put “Energy 7” in the comment. Without that, energy is guessed from BPM and the warm-up → peak → breather shape is only approximate.</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
