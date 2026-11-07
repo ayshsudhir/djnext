@@ -19,6 +19,7 @@ Free, and it runs only on your own computer. Made for the Pioneer DDJ-FLX4; the 
    - ❌ **Spotify and YouTube don't work:** rekordbox can't play them, so djnext can't use them.
 3. **A few dozen tracks in your style**, at least. More tracks = better suggestions.
 4. **Optional: a SoundCloud account** with public likes or playlists. If you link it during setup, djnext picks **only from your SoundCloud likes and playlists that are also in rekordbox**. If you skip it, djnext picks from your **whole rekordbox Collection**.
+5. **Your DJ controller doesn't need to be plugged in** to install or use djnext. djnext never connects to it; it only reads and updates your rekordbox library. Plug it in when you play, as usual.
 
 #### How to add streamed tracks to your rekordbox Collection
 In rekordbox, click the streaming service in the left sidebar (for example **SoundCloud → Likes**), select the tracks (⌘A selects all), and **drag them onto Collection** at the top of the sidebar. Or load each track onto a deck once. rekordbox then analyses them, and djnext can use them.
@@ -43,10 +44,17 @@ Then follow [the Windows / Intel steps](#install-on-windows-or-an-intel-mac) bel
 1. **Download** with the link above. It goes to your **Downloads** folder (click the ⬇️ arrow at the top-right of Safari or Chrome to see it).
 2. **Double-click `djnext.dmg`.** A window opens with the djnext icon and an Applications folder. **Drag djnext onto the Applications folder.**
 3. **Open djnext:** press **⌘ Space**, type **djnext**, press Enter.
-4. **The first time only**, your Mac blocks it because djnext isn't registered with Apple (that costs money; djnext is a free hobby app). To allow it:
-   - Click **Done** on the warning.
-   - Open  Apple menu → **System Settings** → **Privacy & Security**.
-   - Scroll down to *"djnext" was blocked…* and click **Open Anyway**, then **Open Anyway** again (you may need your Mac password).
+4. **The first time only**, your Mac blocks djnext, because it's a free app that isn't registered with Apple (registering costs money). This is expected:
+
+   ![The "djnext Not Opened" warning: click Done, not Move to Trash](docs/images/mac-warning.png)
+
+   - Click **Done**. The box closes and djnext doesn't open. That's normal.
+   - Open the  Apple menu → **System Settings** → **Privacy & Security**, and scroll down to **Security**.
+   - Next to *"djnext" was blocked to protect your Mac*, click **Open Anyway**. Click **Open Anyway** again and enter your Mac password.
+
+   ![Where the Open Anyway button is in System Settings](docs/images/mac-open-anyway.png)
+
+   - Don't see **Open Anyway**? It only shows for about an hour after the warning. Open djnext again (step 3), click **Done**, and go straight back to System Settings.
 
 That's it. djnext opens with a [1-minute setup](https://github.com/ayshsudhir/djnext/blob/main/FRIENDS.md#first-time-setup): your SoundCloud link (optional), the kind of music you play, and whether you're a beginner or advanced DJ.
 

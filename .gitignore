@@ -12,3 +12,4 @@ data/*
 build/
 dist/
 !packaging/mac/icon.png
+!docs/images/*.png
