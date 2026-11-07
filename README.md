@@ -1,18 +1,31 @@
 # 🎧 djnext
 
-**Your DJ sidekick for rekordbox.** djnext looks at your music and tells you **what to play next**, and **how to mix it**.
+**Your DJ sidekick for rekordbox.** djnext looks at the tracks in your rekordbox library and tells you **what to play next**, and **how to mix it**.
 
 - 🎚️ **Live mode:** a small window next to rekordbox. Turn the crowd knob (💤 dead … 🔥 going off) and it suggests the next track that fits the room *and* mixes well with what's playing.
 - 📈 **It learns:** after each set you see how the crowd moved. Tracks that lifted the room get suggested more often.
 - ✨ **Set builder:** pick a mood (warm-up, banging, afters…) and get a whole set in the right order, sent straight to rekordbox with hot cues on your pads.
 
-Free, and it runs only on your own computer. Made for the Pioneer DDJ-FLX4, works with any rekordbox controller.
+Free, and it runs only on your own computer. Made for the Pioneer DDJ-FLX4; the suggestions work with any controller you use with rekordbox.
+
+---
+
+## ✅ What you need first
+
+1. **rekordbox 6 or 7** on your computer ([free download](https://rekordbox.com/en/download/)). Open it at least once.
+2. **Your music inside rekordbox.** djnext can only suggest tracks that are in rekordbox's **Collection** and that rekordbox has **analysed** (that's where the tempo and key come from). Two kinds work:
+   - **Downloaded files** (MP3, WAV, AIFF, FLAC…): drag them onto **Collection** in rekordbox's left sidebar. rekordbox analyses them by itself.
+   - **Streamed tracks** from a service built into rekordbox, such as **SoundCloud** (needs a paid SoundCloud Go+ or DJ plan to play them in rekordbox), Apple Music, Beatport or TIDAL: add them to your **Collection** too ([how](#how-to-add-streamed-tracks-to-your-rekordbox-collection)).
+   - ❌ **Spotify and YouTube don't work:** rekordbox can't play them, so djnext can't use them.
+3. **A few dozen tracks in your style**, at least. More tracks = better suggestions.
+4. **Optional: a SoundCloud account** with public likes or playlists. If you link it during setup, djnext picks **only from your SoundCloud likes and playlists that are also in rekordbox**. If you skip it, djnext picks from your **whole rekordbox Collection**.
+
+#### How to add streamed tracks to your rekordbox Collection
+In rekordbox, click the streaming service in the left sidebar (for example **SoundCloud → Likes**), select the tracks (⌘A selects all), and **drag them onto Collection** at the top of the sidebar. Or load each track onto a deck once. rekordbox then analyses them, and djnext can use them.
 
 ---
 
 ## ⬇️ Download
-
-**You need:** [rekordbox](https://rekordbox.com/en/download/) (free) with some tracks in it.
 
 ### 🍎 Mac with an Apple chip (M1, M2, M3, M4…)
 ### 👉 [**Download djnext for Mac**](https://github.com/ayshsudhir/djnext/releases/latest/download/djnext.dmg)
@@ -35,7 +48,7 @@ Then follow [the Windows / Intel steps](#install-on-windows-or-an-intel-mac) bel
    - Open  Apple menu → **System Settings** → **Privacy & Security**.
    - Scroll down to *"djnext" was blocked…* and click **Open Anyway**, then **Open Anyway** again (you may need your Mac password).
 
-That's it. djnext opens with a 1-minute setup: your SoundCloud link, what you play, and your level.
+That's it. djnext opens with a [1-minute setup](https://github.com/ayshsudhir/djnext/blob/main/FRIENDS.md#first-time-setup): your SoundCloud link (optional), the kind of music you play, and whether you're a beginner or advanced DJ.
 
 ## Install on Windows or an Intel Mac
 
