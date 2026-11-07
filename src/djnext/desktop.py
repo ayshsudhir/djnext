@@ -102,69 +102,76 @@ def _onboarded() -> bool:
 
 
 class Windows:
-    """The two windows, and the functions their pages can call (window.pywebview.api.*)."""
+    """djnext's one window, and the functions its pages can call (window.pywebview.api.*).
 
-    def __init__(self, webview, url: str):
-        self._wv, self._url = webview, url
-        self._main = self._live = None
+    The window switches between two modes instead of opening a second window:
+      - Live: a narrow strip at the right edge of the screen, kept on top of rekordbox;
+      - set builder (and the first-time setup): a bigger window in the middle, not on top.
+    """
 
-    def _alive(self, w) -> bool:
-        return w is not None and w in self._wv.windows
-
-    # called from the pages (return plain values only)
-    def open_main(self) -> None:
-        self._make_main()
-
-    def open_live(self) -> None:
-        self._make_live()
-
+    LIVE_WIDTH = 420
     MAIN_SIZE = (900, 760)  # set builder: room for the energy chart, still fits beside rekordbox
     SETUP_SIZE = (540, 800)  # first-time setup: just the setup card
 
-    def _make_main(self, setup: bool = False):
-        if self._alive(self._main):
-            self._main.restore(); self._main.show()
-            return self._main
-        first = self._main is None and self._live is None
-        width, height = self.SETUP_SIZE if setup else self.MAIN_SIZE
-        try:
-            screen = self._wv.screens[0]
-            width, height = min(width, screen.width - 40), min(height, screen.height - 80)
-        except Exception:
-            pass
-        self._main = self._wv.create_window(
-            APP_NAME, html=SPLASH if first else None, url=None if first else self._url,
-            width=width, height=height, min_size=(400, 560), background_color="#0c0b12", text_select=True,
-            js_api=self)
-        return self._main
+    def __init__(self, webview, url: str):
+        self._wv, self._url = webview, url
+        self._win = None
+        self._mode = None
+        self._pinned = True  # Live stays on top unless you switch it off with the pin button
 
-    def _make_live(self):
-        """A narrow window at the right edge of the screen, kept on top so it stays visible over rekordbox."""
-        if self._alive(self._live):
-            self._live.restore(); self._live.show()
-            return self._live
-        first = self._main is None and self._live is None
-        width, height, x, y = 420, 900, None, None
+    def _screen(self):
         try:
-            screen = self._wv.screens[0]
-            height = min(940, screen.height - 60)
-            x, y = screen.width - width - 12, 30
+            s = self._wv.screens[0]
+            return s.width, s.height
         except Exception:
-            pass
-        self._live = self._wv.create_window(
-            f"{APP_NAME} Live", html=SPLASH if first else None, url=None if first else self._url + "/live",
-            width=width, height=height, x=x, y=y, min_size=(360, 520), on_top=True,
-            background_color="#0c0b12", js_api=self)
-        return self._live
+            return 1440, 900
+
+    def _live_geometry(self):
+        sw, sh = self._screen()
+        return self.LIVE_WIDTH, min(940, sh - 60), sw - self.LIVE_WIDTH - 12, 30
+
+    def _main_geometry(self, setup: bool):
+        sw, sh = self._screen()
+        w, h = self.SETUP_SIZE if setup else self.MAIN_SIZE
+        w, h = min(w, sw - 40), min(h, sh - 80)
+        return w, h, (sw - w) // 2, max(30, (sh - h) // 3)
+
+    def create(self, live: bool, setup: bool = False):
+        """The window, made once at start-up (shows a splash until the page is ready)."""
+        w, h, x, y = self._live_geometry() if live else self._main_geometry(setup)
+        self._mode = "live" if live else "main"
+        self._win = self._wv.create_window(
+            APP_NAME, html=SPLASH, width=w, height=h, x=x, y=y, min_size=(360, 520), on_top=live,
+            background_color="#0c0b12", text_select=True, js_api=self)
+        return self._win
+
+    def _switch(self, live: bool) -> None:
+        win = self._win
+        if win is None:
+            return
+        w, h, x, y = self._live_geometry() if live else self._main_geometry(setup=False)
+        self._mode = "live" if live else "main"
+        win.on_top = live and self._pinned
+        win.resize(w, h)
+        win.move(x, y)
+        win.load_url(self._url + ("/live" if live else "/"))
+
+    # called from the pages (return plain values only)
+    def open_main(self) -> None:
+        self._switch(live=False)
+
+    def open_live(self) -> None:
+        self._switch(live=True)
 
     def toggle_on_top(self) -> bool:
-        if self._alive(self._live):
-            self._live.on_top = not self._live.on_top
-            return self._live.on_top
-        return False
+        if self._win is None or self._mode != "live":
+            return False
+        self._pinned = not self._pinned
+        self._win.on_top = self._pinned
+        return self._pinned
 
     def is_on_top(self) -> bool:
-        return bool(self._alive(self._live) and self._live.on_top)
+        return bool(self._win is not None and self._mode == "live" and self._win.on_top)
 
 
 def main() -> None:
@@ -189,7 +196,7 @@ def main() -> None:
     windows = Windows(webview, url)
     first_run = not _onboarded()
     # The app opens as the small Live window next to rekordbox; the very first start shows the setup instead.
-    first = windows._make_main(setup=True) if first_run else windows._make_live()
+    first = windows.create(live=not first_run, setup=first_run)
 
     def _load_when_ready():
         if not _wait_until_up(url):

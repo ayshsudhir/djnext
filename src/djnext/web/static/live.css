@@ -2,7 +2,7 @@
 body.live { font-size: 14px; background-attachment: fixed; }
 .tiny { font-size: 11.5px; }
 .center { text-align: center; }
-.lv-top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+.lv-top { position: relative; z-index: 20; display: flex; align-items: center; gap: 10px; padding: 10px 14px;
   background: rgba(12, 11, 18, .8); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
 .lv-brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 16px; letter-spacing: -.01em; }
 .lv-brand b { font-size: 11px; letter-spacing: .14em; padding: 2px 7px; border-radius: 6px; background: var(--grad); }
@@ -101,3 +101,8 @@ button.icon.on { background: rgba(255, 61, 139, .2); border-color: var(--a2); }
 .rvchart .axis { fill: var(--dim); font-size: 10px; }
 #learned ol { margin: 4px 0 10px; }
 #learned p { margin: 6px 0 2px; }
+
+.lv-tools { position: sticky; top: 0; z-index: 19; display: flex; gap: 6px; padding: 8px 12px; background: rgba(12, 11, 18, .85);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+.lv-tools .tool { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 6px; font-size: 12.5px; border-radius: 10px; white-space: nowrap; }
+.lv-tools .tool.on { background: rgba(255, 61, 139, .2); border-color: var(--a2); }

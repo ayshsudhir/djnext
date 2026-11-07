@@ -216,3 +216,10 @@ next_song_recommender/
 ## 7. Open questions (answer whenever)
 - Are most of your tracks **local files in rekordbox**, or mostly streamed from SoundCloud? This decides whether the likes are playable or only a taste signal.
 - Which genres or BPM range do you usually play? This sets the defaults for the energy curve.
+
+## 8. Later list (parked ideas, in suggested order)
+1. **Learn from your rekordbox history.** rekordbox keeps every session you played (97 so far). Learn which track you actually play after which, and use that as a bonus in suggestions. Works straight away, with no new sets needed.
+2. **Learn the scoring weights from your crowd.** Today the weights in `config.yaml` (key 3×, tempo 1×, …) are fixed rules of thumb. After about 15–20 Live sets with the crowd knob, fit a small model (logistic regression) on the crowd readings to learn which factors matter for *your* crowd.
+3. **Try new tracks sometimes (exploration).** Now and then suggest a track that hasn't been tested with a crowd yet, so Live doesn't keep recommending the same proven tracks forever.
+4. **Detect what's playing automatically.** Read the track loaded on the deck from rekordbox, so you only touch the crowd knob during a set instead of typing.
+5. **Easier folder names.** Rename folders (on GitHub and on your Mac) so they say what they do.

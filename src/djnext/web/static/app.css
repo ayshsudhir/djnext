@@ -370,12 +370,13 @@ code { background: rgba(255, 255, 255, .08); padding: 1px 6px; border-radius: 6p
 
 /* medium windows (the Mac app's set builder is 900 wide): compact top bar */
 @media (max-width: 1080px) {
-  header.top { gap: 10px; padding: 10px 14px; }
-  nav button { padding: 8px 11px; }
-  nav .lbl { display: none; }
-  nav button.active .lbl { display: inline; }
+  header.top { gap: 8px; padding: 10px 12px; }
+  .brand .eq { display: none; }
+  nav button { padding: 7px 10px; font-size: 13px; gap: 5px; }
+  nav .ic { font-size: 13px; }
   .pill .txt { display: none; }
-  .live-btn { padding: 7px 11px; }
+  .pill { padding: 7px 9px; }
+  .live-btn { padding: 7px 11px; font-size: 13px; }
 }
 /* short windows (the setup window): tighter setup card so the buttons stay visible */
 @media (max-height: 860px) {

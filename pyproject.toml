@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "djnext"
-version = "0.2.1"
+version = "0.2.2"
 description = "Order a rekordbox playlist into a DJ set that follows an energy curve (DDJ-FLX4 friendly)."
 requires-python = ">=3.9"
 license = { text = "MIT" }

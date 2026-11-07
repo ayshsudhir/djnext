@@ -13,15 +13,15 @@ The first time djnext opens, a **short setup** (about a minute) asks three thing
 3. **Beginner or advanced**: beginners get simpler mixing instructions that use BEAT SYNC and short blends; advanced gets longer blends and EQ work.
 
 ## Live mode (while you play)
-A small window that sits next to rekordbox and stays on top (📌 to switch that off). The Mac app opens straight into it.
+A small window that sits next to rekordbox and stays in front of it (press **📌 Keep on top** to switch that off). The Mac app opens straight into it.
 1. In the search box at the top of the Live window, type part of the title or artist of the track that's playing on your deck, then pick it from the list (or press Enter).
 2. Watch the crowd and turn the **knob**: 💤 dead · 😐 meh · 🙂 vibing · 🙌 into it · 🔥 going off (or press keys **1–5**).
 3. djnext says what the room needs ("Change it up: something they know", "Ride it, don't break it"…) and lists tracks that mix well with what's playing. The arrow on the left shows the energy change: **↑** more energy, **→** about the same, **↓** calmer. Click a track to see when and how to mix it in, and press **I'm playing this now** once it's playing, so djnext knows and suggests the next one.
-4. The **📈** button (top right) shows how the set is going: the crowd through the night, which tracks lifted the room and where it dipped. When you finish, press **End set & start fresh** in that window to save the set.
+4. **📈 How's it going?** (at the top) shows how the set is going: the crowd through the night, which tracks lifted the room and where it dipped. When you finish, press **End set & start fresh** in that window to save the set.
 5. **djnext learns from this.** Tracks that lifted your crowd move up in future picks (🚀), ones that made it dip move down (📉), and tracks that rescued a dead room come first when you set the knob to 💤 or 😐. The more sets you play with the knob, the better the picks get.
 
 ## Make a set (before you play)
-The 🗂 button in Live opens the set builder (in the ZIP version it's the main page).
+Press **✨ Make a set** at the top of Live: the same window grows into the set builder. **🎚️ Go live** takes you back. (In the ZIP version the set builder is the main page.)
 - **Make a set:** tap a mood (warm-up, pregame, drunk asf, banging, afters…), pick how long, and press **Make my set**. You get the track order, an energy chart, and for every track **when** and **how** to mix into it. Click a track to open its tips.
 - **Send to rekordbox:** the dot at the top right shows whether rekordbox is open. **Quit rekordbox** (on a Mac: **rekordbox menu → Quit rekordbox**, or ⌘Q) and wait until the dot says *rekordbox closed*, then press **Send to rekordbox**. Then open rekordbox again. In rekordbox, look under **Playlists → djnext** (rekordbox's own Playlists at the top of the sidebar, *not* the SoundCloud section).
   - Your hot cue pads are set up for you: **E** = start the track here, **F** = swap the basses here, **G** = start the next track here.

@@ -539,6 +539,7 @@ $("#wiz-done").addEventListener("click", (ev) => busy(ev.currentTarget, async ()
     favourite_artists: WIZ_FAVS.get(), exclude_genres: p ? p.out : STATUS.style.exclude_genres, onboarded: true,
   });
   $("#wizard").classList.add("hidden");
+  if (window.pywebview) { window.pywebview.api.open_main(); return; }  // Mac app: grow from setup size to the set builder
   await loadStatus();
   loadMoods();
   toast("All set! Pick a mood and press <b>Make my set</b>.", "ok", 6000);
