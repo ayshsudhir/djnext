@@ -55,6 +55,11 @@ Then follow [the Windows / Intel steps](#install-on-windows-or-an-intel-mac) bel
    ![Where the Open Anyway button is in System Settings](docs/images/mac-open-anyway.png)
 
    - Don't see **Open Anyway**? It only shows for about an hour after the warning. Open djnext again (step 3), click **Done**, and go straight back to System Settings.
+   - **Shortcut instead of all the clicks:** open **Terminal** (⌘ Space, type *Terminal*, press Enter), paste this line and press Enter. It removes the "downloaded from the internet" mark from djnext only, and opens it:
+     ```
+     xattr -dr com.apple.quarantine /Applications/djnext.app && open /Applications/djnext.app
+     ```
+   - The installer window also has a help page, **If djnext won't open**, with a button that jumps straight to the right Settings page.
 
 That's it. djnext opens with a [1-minute setup](https://github.com/ayshsudhir/djnext/blob/main/FRIENDS.md#first-time-setup): your SoundCloud link (optional), the kind of music you play, and whether you're a beginner or advanced DJ.
 

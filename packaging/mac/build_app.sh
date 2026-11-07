@@ -61,6 +61,7 @@ STAGE="$BUILD/dmg"
 rm -rf "$STAGE" "$DMG" && mkdir -p "$STAGE"
 cp -R "$DIST/djnext.app" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
+cp "packaging/mac/If djnext won't open.html" "$STAGE/"  # help that opens in the browser (macOS doesn't block it)
 hdiutil create -quiet -volname "djnext" -srcfolder "$STAGE" -fs HFS+ -format UDZO "$DMG"
 echo "==> Done:"
 echo "    App:       $DIST/djnext.app"

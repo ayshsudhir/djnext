@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>If djnext won't open</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; font: 17px/1.55 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; background: #f5f4f8; color: #1d1d1f; }
+  main { max-width: 640px; margin: 0 auto; padding: 40px 24px 60px; }
+  h1 { font-size: 30px; margin: 0 0 6px; letter-spacing: -.02em; }
+  .lead { color: #555; margin: 0 0 26px; }
+  .card { background: #fff; border-radius: 18px; padding: 22px 24px; margin-bottom: 18px; box-shadow: 0 6px 24px rgba(0, 0, 0, .07); }
+  .card h2 { margin: 0 0 4px; font-size: 19px; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; background: #ffe7dc; color: #c2410c; margin-bottom: 8px; }
+  ol { padding-left: 22px; margin: 10px 0; }
+  li { margin: 7px 0; }
+  .btn { display: inline-block; padding: 11px 18px; border-radius: 12px; border: 0; font: inherit; font-weight: 700; cursor: pointer; text-decoration: none; color: #fff;
+    background: linear-gradient(135deg, #ff7a45, #ff3d8b); }
+  .btn.small { padding: 7px 14px; font-size: 15px; }
+  pre { background: #1d1b26; color: #f2f0f7; padding: 14px 16px; border-radius: 12px; white-space: pre-wrap; word-break: break-all; font-size: 14.5px; margin: 10px 0; }
+  .muted { color: #6e6e73; font-size: 15px; }
+  .ok { color: #1f9d47; font-weight: 700; margin-left: 8px; }
+  kbd { background: #eee; border: 1px solid #ccc; border-bottom-width: 2px; border-radius: 6px; padding: 1px 6px; font: 600 14px -apple-system, sans-serif; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #0c0b12; color: #f2f0f7; }
+    .card { background: #17161f; box-shadow: none; border: 1px solid #2a2834; }
+    .lead, .muted { color: #a09cb0; }
+    .tag { background: #3a2016; color: #ffb08f; }
+    kbd { background: #2a2834; border-color: #3a3846; color: #f2f0f7; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>If djnext won't open</h1>
+  <p class="lead">Your Mac says <b>"djnext" Not Opened</b>. That's expected: djnext is a free app that isn't registered with Apple.
+    Click <b>Done</b> on that message (not <i>Move to Trash</i>), then use <b>one</b> of these two ways. You only need to do this once.</p>
+
+  <div class="card">
+    <span class="tag">Way 1 · clicks</span>
+    <h2>Allow it in System Settings</h2>
+    <ol>
+      <li>First drag <b>djnext</b> into <b>Applications</b> and try to open it once (that's when the Mac blocks it).</li>
+      <li>Press this button. It opens the right page of System Settings:<br><br>
+        <a class="btn" href="x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension">Open Privacy &amp; Security</a>
+        <div class="muted">If your browser asks whether to open System Settings, click <b>Allow</b>.</div></li>
+      <li>Scroll down to <b>Security</b>. Next to <i>"djnext" was blocked to protect your Mac</i>, click <b>Open Anyway</b>.</li>
+      <li>Click <b>Open Anyway</b> again and enter your Mac password. djnext opens.</li>
+    </ol>
+    <p class="muted">No <b>Open Anyway</b> button? It only shows for about an hour after the Mac blocked djnext. Open djnext again, click <b>Done</b>, then press the button above.</p>
+  </div>
+
+  <div class="card">
+    <span class="tag">Way 2 · one line</span>
+    <h2>Or copy one line into Terminal</h2>
+    <ol>
+      <li>Make sure <b>djnext</b> is in your <b>Applications</b> folder.</li>
+      <li>Press <button class="btn small" id="copy">Copy the command</button><span class="ok" id="copied" hidden>Copied ✓</span></li>
+      <li>Open <b>Terminal</b>: press <kbd>⌘</kbd> <kbd>Space</kbd>, type <b>Terminal</b>, press <kbd>Enter</kbd>.</li>
+      <li>Click in the Terminal window, press <kbd>⌘</kbd> <kbd>V</kbd> to paste, then <kbd>Enter</kbd>. djnext opens.</li>
+    </ol>
+    <pre id="cmd">xattr -dr com.apple.quarantine /Applications/djnext.app &amp;&amp; open /Applications/djnext.app</pre>
+    <p class="muted">What it does: removes the "downloaded from the internet" mark from djnext only, then opens it. It doesn't change any other setting on your Mac.</p>
+  </div>
+
+  <p class="muted">Still stuck? Ask on <a href="https://github.com/ayshsudhir/djnext/issues/new">the djnext page</a> or message whoever sent you djnext.</p>
+</main>
+<script>
+  document.getElementById("copy").addEventListener("click", async () => {
+    const text = document.getElementById("cmd").textContent;
+    try { await navigator.clipboard.writeText(text); }
+    catch {
+      const r = document.createRange(); r.selectNodeContents(document.getElementById("cmd"));
+      const s = getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand("copy"); s.removeAllRanges();
+    }
+    document.getElementById("copied").hidden = false;
+  });
+</script>
+</body>
+</html>
