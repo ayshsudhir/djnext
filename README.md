@@ -1,16 +1,73 @@
-# djnext: next-song recommender for rekordbox + DDJ-FLX4
+# 🎧 djnext
+
+**Your DJ sidekick for rekordbox.** djnext looks at your music and tells you **what to play next**, and **how to mix it**.
+
+- 🎚️ **Live mode:** a small window next to rekordbox. Turn the crowd knob (💤 dead … 🔥 going off) and it suggests the next track that fits the room *and* mixes well with what's playing.
+- 📈 **It learns:** after each set you see how the crowd moved. Tracks that lifted the room get suggested more often.
+- ✨ **Set builder:** pick a mood (warm-up, banging, afters…) and get a whole set in the right order, sent straight to rekordbox with hot cues on your pads.
+
+Free, and it runs only on your own computer. Made for the Pioneer DDJ-FLX4, works with any rekordbox controller.
+
+---
+
+## ⬇️ Download
+
+### 🍎 Mac with an Apple chip (M1, M2, M3, M4…)
+### 👉 [**Download djnext for Mac**](https://github.com/ayshsudhir/djnext/releases/latest/download/djnext.dmg)
+
+Not sure which chip you have? Click the  Apple menu (top-left of your screen) → **About This Mac**. If it says **Chip: Apple M…**, this is the one for you. If it says **Processor: Intel**, use the Windows / Intel link below.
+
+### 🪟 Windows, or a Mac with an Intel processor
+### 👉 [**Download djnext (ZIP)**](https://github.com/ayshsudhir/djnext/archive/refs/heads/main.zip)
+Then follow [the Windows / Intel steps](https://github.com/ayshsudhir/djnext/blob/main/FRIENDS.md#install-on-windows-or-an-intel-mac).
+
+---
+
+## 🛠️ Install on a Mac in 4 steps
+
+1. **Download** with the link above. It goes to your **Downloads** folder (click the ⬇️ arrow at the top-right of Safari or Chrome to see it).
+2. **Double-click `djnext.dmg`.** A window opens with the djnext icon and an Applications folder. **Drag djnext onto the Applications folder.**
+3. **Open djnext:** press **⌘ Space**, type **djnext**, press Enter.
+4. **The first time only**, your Mac blocks it because djnext isn't registered with Apple (that costs money; djnext is a free hobby app). To allow it:
+   - Click **Done** on the warning.
+   - Open  Apple menu → **System Settings** → **Privacy & Security**.
+   - Scroll down to *"djnext" was blocked…* and click **Open Anyway**, then **Open Anyway** again (you may need your Mac password).
+
+That's it. djnext opens with a 1-minute setup: your SoundCloud link, what you play, and your level.
+
+**You need:** [rekordbox](https://rekordbox.com/en/download/) (free) with some tracks in it. That's all; nothing else to install.
+
+---
+
+## 📖 How to use it
+
+The full guide, in plain words: **[How to use djnext](https://github.com/ayshsudhir/djnext/blob/main/FRIENDS.md#using-it)**
+
+Quick links:
+- [Live mode: the crowd knob](https://github.com/ayshsudhir/djnext/blob/main/FRIENDS.md#using-it)
+- [Something went wrong?](https://github.com/ayshsudhir/djnext/blob/main/FRIENDS.md#if-something-goes-wrong)
+- [Getting a newer version](https://github.com/ayshsudhir/djnext/blob/main/FRIENDS.md#tips)
+- [Disclaimer (please read)](https://github.com/ayshsudhir/djnext/blob/main/FRIENDS.md#disclaimer)
+
+Stuck? [**Ask a question here**](https://github.com/ayshsudhir/djnext/issues/new) (you need a free GitHub account), or message whoever sent you this link.
+
+---
+
+## 👩‍💻 For developers
+
+Everything below is for people who want to run djnext from the code or change it. You don't need any of it to use the app.
 
 Orders your tracks into a DJ set that mixes harmonically (Camelot), stays within tempo-slider range, and follows the **DJ set energy curve** (warm-up → build → first peak → breather → final peak). See [PLAN.md](PLAN.md) for the full roadmap.
 
-## Easiest: the web page
-Double-click **`Start djnext.command`** (Mac) or **`Start djnext.bat`** (Windows), or run `djnext app`. It opens a page in your browser where you sync SoundCloud, make a set, send it to rekordbox and rate transitions. It runs only on your computer. To share it with friends, see [FRIENDS.md](FRIENDS.md).
+### Run from the code
+Double-click **`Start djnext.command`** (Mac) or **`Start djnext.bat`** (Windows), or run `djnext app` (browser) or `python -m djnext.desktop` (own window, needs `pip install -e '.[mac]'`).
 
-## Mac app
+### Building the Mac app
 `packaging/mac/build_app.sh` builds **djnext.app** (its own window, Python included) and a drag-to-Applications
 **.dmg** in `dist/`. It needs Python 3.10+ (`brew install python@3.12`). The app opens the small **Live** window
 (next to rekordbox, kept on top) and keeps its data in `~/Library/Application Support/djnext`, its log in
 `~/Library/Logs/djnext.log`. It's signed ad hoc (free), so friends click **Open Anyway** once in
-System Settings → Privacy & Security. Publish it with `gh release create v0.2.0 dist/djnext-0.2.0-arm64.dmg`.
+System Settings → Privacy & Security. Publish it with `gh release create v0.2.0 dist/djnext.dmg`. Keep the file name `djnext.dmg`: the download link at the top of this page always fetches the newest release's `djnext.dmg`.
 
 ## Setup (once)
 ```bash

@@ -4,8 +4,10 @@ djnext builds a DJ set for you from your own music in rekordbox. It puts the tra
 
 Everything runs on **your own computer**. Your music and library never leave it.
 
+**Jump to:** [Install on a Mac](#install-on-a-mac-apple-silicon-m1-or-newer) · [Windows / Intel Mac](#install-on-windows-or-an-intel-mac) · [Using it](#using-it) · [Something went wrong](#if-something-goes-wrong) · [Tips](#tips) · [Disclaimer](#disclaimer) · [⬅ Back to the start page](https://github.com/ayshsudhir/djnext)
+
 ## Install on a Mac (Apple Silicon: M1 or newer)
-1. On the djnext GitHub page, click **Releases** (right-hand side), then download **`djnext-…-arm64.dmg`**.
+1. **[Click here to download djnext for Mac](https://github.com/ayshsudhir/djnext/releases/latest/download/djnext.dmg).** It goes to your **Downloads** folder.
 2. Double-click the downloaded `.dmg`. A window opens: **drag the djnext icon onto the Applications folder**.
 3. Open djnext from **Launchpad**, **Spotlight** (⌘ Space, type *djnext*) or your Applications folder. Drag it to your Dock to keep it there.
 4. **The first time**, the Mac says djnext can't be checked for malware (it's a free hobby app, not registered with Apple). Click **Done**, then open
@@ -18,7 +20,7 @@ Nothing else to install: Python and everything djnext needs are inside the app. 
 
 ## Install on Windows, or an Intel Mac
 - You need **rekordbox** (6 or 7) and **Python 3**: install it from [python.org/downloads](https://www.python.org/downloads/) and **tick "Add python.exe to PATH"** (Windows).
-1. On the GitHub page, click the green **Code** button, then **Download ZIP**, and unzip it, for example into Documents.
+1. **[Click here to download the ZIP](https://github.com/ayshsudhir/djnext/archive/refs/heads/main.zip)** and double-click it in your Downloads folder to unzip it. Move the unzipped folder somewhere handy, for example Documents.
 2. Double-click **`Start djnext.bat`** (Windows; if a blue "protected your PC" box shows, click **More info → Run anyway**) or **`Start djnext.command`** (Intel Mac; if it can't be opened, right-click → **Open → Open**).
 3. The first start installs everything, which takes a few minutes. Then your browser opens **djnext**. Keep the black window open while you use it.
 
@@ -46,11 +48,11 @@ Then:
 ## If something goes wrong
 - **Undo:** **Settings → Undo last change** puts your rekordbox library back exactly as it was before djnext's last change. Quit rekordbox first. Every change is backed up beforehand, in the `data/backups` folder.
 - **rekordbox hangs when starting:** force-quit it (Mac: ⌥⌘Esc; Windows: Ctrl+Shift+Esc), wait a few seconds and open it again. If it still hangs, use **Undo last change**.
-- **Anything else:** send a screenshot of the black djnext window and the browser page to whoever shared djnext with you.
+- **Anything else:** [ask a question here](https://github.com/ayshsudhir/djnext/issues/new) (free GitHub account needed), or send a screenshot to whoever shared djnext with you. Mac app: the file `~/Library/Logs/djnext.log` helps; in Finder press ⇧⌘G and paste that path to find it.
 
 ## Tips
 - **Energy:** star-rate your tracks in rekordbox (1★ chill … 5★ peak-time). Without ratings, energy is guessed from BPM.
-- **Getting an update:** Mac app: download the new `.dmg` and drag djnext into Applications again (replace). ZIP version: download the ZIP again and replace the old folder, but **keep your old `data` folder**, because it holds your settings and ratings.
+- **Getting an update:** Mac app: [download the newest version](https://github.com/ayshsudhir/djnext/releases/latest/download/djnext.dmg) and drag djnext into Applications again (choose **Replace**). ZIP version: [download the ZIP again](https://github.com/ayshsudhir/djnext/archive/refs/heads/main.zip) and replace the old folder, but **keep your old `data` folder**, because it holds your settings and ratings.
 
 ## Disclaimer
 djnext is an independent hobby project. It is **not affiliated with or endorsed by** Pioneer DJ, AlphaTheta, rekordbox or SoundCloud.

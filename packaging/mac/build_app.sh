@@ -1,6 +1,6 @@
 #!/bin/bash
 # Builds djnext.app and djnext.dmg (drag-to-Applications installer) for Macs with the same chip as this one.
-#   packaging/mac/build_app.sh           -> dist/djnext.app and dist/djnext-<version>-<arch>.dmg
+#   packaging/mac/build_app.sh           -> dist/djnext.app and dist/djnext.dmg
 # Needs: Python 3.10+ (e.g. `brew install python@3.12`). Everything else is installed into build/mac-venv.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -52,7 +52,7 @@ plutil -replace NSHumanReadableCopyright -string "MIT licence. Not affiliated wi
 codesign --force --deep --sign - "$DIST/djnext.app"
 
 # 5. The installer: a disk image with the app and a shortcut to Applications to drag it onto
-DMG="$DIST/djnext-$VERSION-$ARCH.dmg"
+DMG="$DIST/djnext.dmg"  # stable name: README links to releases/latest/download/djnext.dmg
 STAGE="$BUILD/dmg"
 rm -rf "$STAGE" "$DMG" && mkdir -p "$STAGE"
 cp -R "$DIST/djnext.app" "$STAGE/"
