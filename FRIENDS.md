@@ -4,31 +4,44 @@ djnext builds a DJ set for you from your own music in rekordbox. It puts the tra
 
 Everything runs on **your own computer**. Your music and library never leave it.
 
-## What you need
-- **rekordbox** (6 or 7) on a Mac or Windows PC, with some tracks already in it. Streamed SoundCloud tracks work too.
-- **Python 3**:
-  - **Mac:** usually already there. If not, the first start offers to install it; accept and start again.
-  - **Windows:** install it from [python.org/downloads](https://www.python.org/downloads/) and **tick "Add python.exe to PATH"** in the installer.
+## Install on a Mac (Apple Silicon: M1 or newer)
+1. On the djnext GitHub page, click **Releases** (right-hand side), then download **`djnext-…-arm64.dmg`**.
+2. Double-click the downloaded `.dmg`. A window opens: **drag the djnext icon onto the Applications folder**.
+3. Open djnext from **Launchpad**, **Spotlight** (⌘ Space, type *djnext*) or your Applications folder. Drag it to your Dock to keep it there.
+4. **The first time**, the Mac says djnext can't be checked for malware (it's a free hobby app, not registered with Apple). Click **Done**, then open
+   **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to *"djnext" was blocked*, then **Open Anyway** again.
+   You only do this once.
 
-## Install (once)
-1. On the GitHub page you were invited to, click the green **Code** button, then **Download ZIP**, and unzip it somewhere, for example into Documents.
-2. Open the folder and double-click:
-   - **Mac:** `Start djnext.command`. If the Mac says it can't be opened, **right-click it → Open → Open**. You only need to do that the first time.
-   - **Windows:** `Start djnext.bat`. If Windows shows a blue "protected your PC" box, click **More info → Run anyway**.
-3. The first start installs everything, which takes a few minutes. Then your browser opens **djnext**.
+Nothing else to install: Python and everything djnext needs are inside the app. You can eject the djnext disk and delete the `.dmg` afterwards.
+- Your settings, SoundCloud lists and ratings live in `~/Library/Application Support/djnext`. Updating = drag the new version into Applications and replace; your data stays.
+- To remove djnext completely: drag it from Applications to the Bin, and delete that `djnext` folder.
 
-From then on, just double-click the same file. **Keep the black window open while you use djnext**, and close it when you're done.
+## Install on Windows, or an Intel Mac
+- You need **rekordbox** (6 or 7) and **Python 3**: install it from [python.org/downloads](https://www.python.org/downloads/) and **tick "Add python.exe to PATH"** (Windows).
+1. On the GitHub page, click the green **Code** button, then **Download ZIP**, and unzip it, for example into Documents.
+2. Double-click **`Start djnext.bat`** (Windows; if a blue "protected your PC" box shows, click **More info → Run anyway**) or **`Start djnext.command`** (Intel Mac; if it can't be opened, right-click → **Open → Open**).
+3. The first start installs everything, which takes a few minutes. Then your browser opens **djnext**. Keep the black window open while you use it.
 
 ## Using it
-1. **My music:** paste your SoundCloud profile link (for example `https://soundcloud.com/your-name`) and press **Sync**. Your likes and playlists show up, along with how many tracks rekordbox has already analysed.
-   - Tracks rekordbox hasn't analysed yet can't be used. In rekordbox, open them from the SoundCloud section and add them to your collection, or load each one on a deck once. Then press **Reload library**.
-2. **Settings:** set **your** BPM range, favourite artists and genres to leave out. The defaults are tech house and groovy techno with the sharer's favourite artists, so change them to your own. Pick **Beginner** or **Advanced** mixing level.
-3. **Make a set:** click a **mood** (warm-up, pregame, drunk asf, banging, afters, groovy techno), choose a length, and press **Make a set**. You'll see the order, an energy chart, and for every track **when** and **how** to mix into it.
-4. **Send to rekordbox:** **quit rekordbox first**, then press the button. Wait a few seconds, then open rekordbox and look under **Playlists → djnext** (rekordbox's own Playlists at the top of the sidebar, *not* the SoundCloud section).
-   - The hot cue pads are set up for you: **E** = where to start the track, **F** = swap the basses here, **G** = start the next track here.
-   - **My music → Create mood playlists** adds one playlist per mood under **Playlists → djnext moods**.
-5. **Discover:** finds new tracks on SoundCloud that fit your style. Like the ones you want on SoundCloud, sync again, and add them to your rekordbox collection.
-6. **Rate:** after mixing, give each transition 👍 or 👎. Pairs you didn't like won't be put together again.
+The first time djnext opens, a **short setup** (about a minute) asks three things:
+1. **Your SoundCloud link**, for example `https://soundcloud.com/your-name`. Don't use SoundCloud? Press **I don't use SoundCloud** and djnext uses your rekordbox collection instead.
+2. **What you play**: tech house, techno, house, drum & bass… plus your favourite artists if you like.
+3. **Beginner or advanced**: beginners get simpler mixes with BEAT SYNC.
+
+Then:
+- **🎚️ Live (while you play):** a small window that sits next to rekordbox and stays on top (📌 to switch that off). The Mac app opens straight into it.
+  1. Type the track that's playing and press Enter.
+  2. Watch the crowd and turn the **knob**: 💤 dead · 😐 meh · 🙂 vibing · 🙌 into it · 🔥 going off (or press keys **1–5**).
+  3. djnext says what the room needs ("Change it up: something they know", "Ride it, don't break it"…) and lists tracks that mix well with what's playing. ↑ means more energy. Tap one to see when and how to mix it, and press **I'm playing this now** when it's on.
+  4. **📈** shows how the set is going: the crowd through the night, which tracks lifted the room and where it dipped. **End set** saves it.
+  5. **djnext learns from this.** Tracks that lifted your crowd move up in future picks (🚀), ones that made it dip move down (📉), and tracks that rescued a dead room come first when you set the knob to 💤 or 😐. The more sets you play with the knob, the better the picks get.
+- **Make a set:** tap a mood (warm-up, pregame, drunk asf, banging, afters…), pick how long, and press **Make my set**. You get the order, an energy chart, and for every track **when** and **how** to mix into it. Tap a track to open its tips.
+- **Send to rekordbox:** the dot at the top right shows whether rekordbox is open. **Quit rekordbox** until it says *rekordbox closed*, then press **Send to rekordbox**. In rekordbox, look under **Playlists → djnext** (rekordbox's own Playlists at the top of the sidebar, *not* the SoundCloud section).
+  - Your hot cue pads are set up for you: **E** = start the track here, **F** = swap the basses here, **G** = start the next track here.
+- **My music:** shows which of your SoundCloud tracks rekordbox has analysed. Tracks it hasn't analysed yet can't be used: in rekordbox, open them from the SoundCloud section and add them to your collection, then press **Reload library**.
+- **Discover:** finds new tracks on SoundCloud that fit your style. Like the ones you want on SoundCloud, sync again, and add them to your rekordbox collection.
+- **Rate:** after mixing, give each transition 👍 or 👎. Pairs you didn't like won't be put together again.
+- **Settings:** change your style or level any time, or **Run the setup again**.
 
 ## If something goes wrong
 - **Undo:** **Settings → Undo last change** puts your rekordbox library back exactly as it was before djnext's last change. Quit rekordbox first. Every change is backed up beforehand, in the `data/backups` folder.
@@ -37,7 +50,7 @@ From then on, just double-click the same file. **Keep the black window open whil
 
 ## Tips
 - **Energy:** star-rate your tracks in rekordbox (1★ chill … 5★ peak-time). Without ratings, energy is guessed from BPM.
-- **Getting an update:** download the ZIP again and replace the old folder, but **keep your old `data` folder**, because it holds your settings and ratings.
+- **Getting an update:** Mac app: download the new `.dmg` and drag djnext into Applications again (replace). ZIP version: download the ZIP again and replace the old folder, but **keep your old `data` folder**, because it holds your settings and ratings.
 
 ## Disclaimer
 djnext is an independent hobby project. It is **not affiliated with or endorsed by** Pioneer DJ, AlphaTheta, rekordbox or SoundCloud.

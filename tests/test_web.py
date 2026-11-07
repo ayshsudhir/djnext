@@ -90,3 +90,13 @@ def test_undo_restores_latest_backup(client, tmp_path, monkeypatch):
     monkeypatch.setattr(rp, "rekordbox_running", lambda: False)
     assert client.post("/api/undo", json={}).json() == {"restored": "20260101-000000"}
     assert (db_dir / "master.db").read_text() == "OLD"
+
+
+def test_first_run_setup_and_rekordbox_poll(client):
+    assert client.get("/api/status").json()["onboarded"] is False  # no SoundCloud, no setup yet: show the wizard
+    assert client.get("/api/rekordbox").json() == {"running": True}
+    s = client.post("/api/settings", json={"bpm_min": 165, "bpm_max": 178, "favourite_artists": [],
+                                           "exclude_genres": [], "onboarded": True}).json()
+    assert s["onboarded"] is True and s["style"]["bpm_min"] == 165
+    s = client.post("/api/settings", json={"bpm_min": 120, "bpm_max": 130}).json()  # later saves keep the flag
+    assert s["onboarded"] is True

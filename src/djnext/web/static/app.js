@@ -1,9 +1,31 @@
 // djnext web page: talks to the local server (only on this computer).
 const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-let STATUS = null, SET = null, CHART = null, MOOD = null;
+let STATUS = null, SET = null, MOOD = null, LENGTH = 60, RB_OPEN = null, OVERALL = 0;
 const RATINGS = {};
 
+// Mood colours (gradient per mood card).
+const HUES = {
+  "": ["#8b6cff", "#3ec8ff"], warmup: ["#ffb347", "#ff6a88"], pregame: ["#ffd86b", "#ff7a45"],
+  drunk: ["#ff3d8b", "#b44bff"], banging: ["#ff5a36", "#ff1f5a"], afters: ["#5b6cff", "#9b4bff"],
+  groovy_techno: ["#3ec8ff", "#3ee0a0"],
+};
+const PALETTE = [["#ff7a45", "#ff3d8b"], ["#3ec8ff", "#8b6cff"], ["#3ee0a0", "#3ec8ff"], ["#ffd86b", "#ff7a45"]];
+
+// Style presets for the setup and Settings: BPM range + genres to leave out.
+const COMMON_OUT = ["rock", "hip-hop", "hip hop", "rap", "pop", "r&b", "classical", "country", "metal", "jazz", "folk", "soundtrack", "reggae", "indie"];
+const PRESETS = [
+  { name: "Tech house", bpm: [122, 130], out: [...COMMON_OUT, "ambient"] },
+  { name: "Tech house + groovy techno", bpm: [122, 134], out: [...COMMON_OUT, "ambient"] },
+  { name: "House / deep house", bpm: [118, 126], out: COMMON_OUT },
+  { name: "Melodic techno", bpm: [118, 128], out: COMMON_OUT },
+  { name: "Techno", bpm: [126, 140], out: [...COMMON_OUT, "ambient"] },
+  { name: "Drum & bass", bpm: [165, 178], out: COMMON_OUT },
+  { name: "A bit of everything", bpm: [70, 180], out: [] },
+];
+
+// ---------- helpers ----------
 async function api(path, body) {
   const res = await fetch(path, body === undefined ? {} : {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
@@ -13,52 +35,90 @@ async function api(path, body) {
   return data;
 }
 
-function banner(text, kind = "") {
-  const b = $("#banner");
-  if (!text) return b.classList.add("hidden");
-  b.className = `banner ${kind}`;
-  b.innerHTML = text;
+function toast(text, kind = "ok", ms = 4500) {
+  const t = document.createElement("div");
+  t.className = `toast ${kind}`;
+  t.innerHTML = text;
+  $("#toasts").appendChild(t);
+  setTimeout(() => t.remove(), ms);
 }
 
+function banner(html, kind = "") {
+  const b = $("#banner");
+  if (!html) return b.classList.add("hidden");
+  b.className = `banner ${kind}`;
+  b.innerHTML = html;
+}
+
+// Runs an action with a spinner on the button; errors become a red toast.
+async function busy(btn, fn) {
+  btn.classList.add("loading");
+  btn.disabled = true;
+  document.body.classList.add("busy");
+  try { return await fn(); }
+  catch (e) { toast(esc(e.message), "err", 7000); }
+  finally { btn.classList.remove("loading"); btn.disabled = false; document.body.classList.remove("busy"); }
+}
+
+function when(s) { return s ? s.replace("T", " at ").slice(0, 19) : ""; }
+
 // ---------- tabs ----------
-document.querySelectorAll("nav button").forEach((btn) => btn.addEventListener("click", () => showTab(btn.dataset.tab)));
+$$("#nav button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
 function showTab(name) {
-  document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
-  document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("hidden", t.id !== `tab-${name}`));
+  $$("#nav button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
+  $$(".tab").forEach((t) => t.classList.toggle("hidden", t.id !== `tab-${name}`));
   if (name === "rate") { renderRate(); loadFeedback(); }
   if (name === "discover") loadDiscover();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
+window.showTab = showTab;
+
+// ---------- rekordbox open/closed (polled) ----------
+async function pollRekordbox() {
+  try {
+    const r = await api("/api/rekordbox");
+    RB_OPEN = r.running;
+  } catch { RB_OPEN = null; }
+  const pill = $("#rb-pill");
+  pill.className = `pill ${RB_OPEN === null ? "" : RB_OPEN ? "open" : "closed"}`;
+  pill.querySelector(".txt").textContent = RB_OPEN === null ? "rekordbox ?" : RB_OPEN ? "rekordbox is open" : "rekordbox closed";
+  const quit = $("#step-quit");
+  quit.classList.toggle("done", RB_OPEN === false);
+  quit.classList.toggle("todo", RB_OPEN === true);
+  quit.lastChild.textContent = RB_OPEN ? "Quit rekordbox (it's open now)" : "Quit rekordbox";
+}
+setInterval(pollRekordbox, 4000);
 
 // ---------- status ----------
 async function loadStatus() {
   try {
     STATUS = await api("/api/status");
   } catch (e) {
-    banner(esc(e.message), "err");
-    return;
+    banner(`<b>Couldn't open your rekordbox library.</b> ${esc(e.message)} Make sure rekordbox is installed and has been opened at least once, then reload this page.`, "err");
+    return false;
   }
   renderLists();
   renderMusic();
   renderSettings();
   $("#curve").innerHTML = STATUS.curves.map((c) => `<option ${c === STATUS.default_curve ? "selected" : ""}>${esc(c)}</option>`).join("");
-  const st = STATUS.style;
-  $("#style-hint").textContent = `(${st.bpm_min}–${st.bpm_max} BPM)`;
-  if (!STATUS.soundcloud) {
-    banner(`Welcome! Start in <b>My music</b>: paste your SoundCloud profile link so the tool knows your likes and playlists.
-            <button onclick="showTab('music')">Go to My music</button>`);
+  $("#style-hint").textContent = `(${STATUS.style.bpm_min}–${STATUS.style.bpm_max} BPM)`;
+  if (STATUS.soundcloud && STATUS.not_analysed > 0) {
+    banner(`<span>💡 <b>${STATUS.not_analysed}</b> of your SoundCloud tracks aren't analysed in rekordbox yet, so they can't be used.</span>
+            <button onclick="showTab('music')">How to fix</button>`);
   } else banner("");
+  return true;
 }
 
 function renderLists() {
   const items = [...STATUS.soundcloud_lists, ...STATUS.rekordbox_lists];
   if (!items.length) {
-    $("#lists").innerHTML = `<p class="muted">No lists yet. Sync SoundCloud in <b>My music</b>, or the whole rekordbox collection will be used.</p>`;
+    $("#lists").innerHTML = `<p class="muted small">No lists yet, so your whole rekordbox collection is used.</p>`;
     return;
   }
   $("#lists").innerHTML = items.map((l) => `
     <label class="list-item ${l.ready ? "" : "disabled"}" title="${l.ready} of ${l.total} tracks are analysed in rekordbox">
       <input type="checkbox" value="${esc(l.key)}" ${l.ready ? "checked" : "disabled"}>
-      ${l.key.startsWith("sc:") ? "☁︎ " : ""}${esc(l.name)} <small>${l.ready}/${l.total} ready</small>
+      ${l.key.startsWith("sc:") ? "☁︎ " : "📁 "}${esc(l.name)} <small>${l.ready}/${l.total}</small>
     </label>`).join("");
 }
 
@@ -66,182 +126,207 @@ function renderLists() {
 async function loadMoods() {
   try {
     const r = await api("/api/moods");
-    const cards = [{ key: null, emoji: "🎛️", name: "My style", ask: "Your BPM range + favourite artists, from the lists below.", count: null }, ...r.moods];
-    $("#moods").innerHTML = cards.map((m) => `
-      <button class="mood ${m.key === MOOD ? "on" : ""} ${m.count !== null && m.count < 8 ? "thin" : ""}" data-key="${m.key ?? ""}"
-              title="${esc((m.examples || []).join(", "))}">
-        <span class="em">${m.emoji}</span><b>${esc(m.name)}</b><span>${esc(m.ask)}</span>
-        ${m.count !== null ? `<span>${m.count} tracks${m.count < 8 ? " (too few for a set)" : ""}</span>` : ""}
-      </button>`).join("");
-    document.querySelectorAll(".mood").forEach((b) => b.addEventListener("click", () => {
+    const cards = [{ key: null, emoji: "🎛️", name: "My style", ask: "Your whole range, with your favourite artists first.", count: null }, ...r.moods];
+    $("#moods").innerHTML = cards.map((m, i) => {
+      const [h1, h2] = HUES[m.key ?? ""] || PALETTE[i % PALETTE.length];
+      const thin = m.count !== null && m.count < 8;
+      return `<button class="mood ${(m.key ?? null) === MOOD ? "on" : ""} ${thin ? "thin" : ""}" data-key="${esc(m.key ?? "")}"
+                style="--h1:${h1};--h2:${h2}" title="${esc((m.examples || []).length ? "e.g. " + m.examples.join(", ") : "")}">
+        <span class="em">${m.emoji}</span><b>${esc(m.name)}</b><span class="ask">${esc(m.ask)}</span>
+        <span class="count">${m.count === null ? "Choose lists in More options" : thin ? `Only ${m.count} tracks, too few` : `${m.count} tracks`}</span>
+      </button>`;
+    }).join("");
+    $$(".mood").forEach((b) => b.addEventListener("click", () => {
       MOOD = b.dataset.key || null;
-      loadMoods();
-      $("#lists").classList.toggle("hidden", !!MOOD);
-      $("#use-style").closest("label").classList.toggle("hidden", !!MOOD);
-      $("#curve").closest("label").classList.toggle("hidden", !!MOOD);
-      $("#mood-hint").textContent = MOOD ? "Moods pick from all your analysed SoundCloud tracks and use their own energy shape." : "";
+      $$(".mood").forEach((x) => x.classList.toggle("on", x === b));
+      $("#lists-wrap").classList.toggle("hidden", !!MOOD);
+      $("#curve-row").classList.toggle("hidden", !!MOOD);
+      $("#mood-hint").textContent = MOOD ? "Moods pick from all your analysed tracks and have their own energy shape, so there's nothing to choose here." : "";
     }));
   } catch (e) { $("#moods").innerHTML = `<p class="muted">${esc(e.message)}</p>`; }
 }
 
-$("#moods-push").addEventListener("click", async () => {
-  $("#moods-push").disabled = true;
-  try {
-    const r = await api("/api/moods/push", {});
-    $("#moods-push-status").innerHTML = `<div class="banner ok">Created under <b>Playlists → ${esc(r.folder)}</b>: ` +
-      Object.entries(r.playlists).map(([k, v]) => `${esc(k)} (${v})`).join(", ") + "</div>";
-  } catch (e) { $("#moods-push-status").innerHTML = `<div class="banner err">${esc(e.message)}</div>`; }
-  $("#moods-push").disabled = false;
-});
+$$("#length button").forEach((b) => b.addEventListener("click", () => {
+  LENGTH = +b.dataset.v;
+  $$("#length button").forEach((x) => x.classList.toggle("on", x === b));
+}));
 
 // ---------- make a set ----------
-$("#make").addEventListener("click", async () => {
-  const lists = [...document.querySelectorAll("#lists input:checked")].map((i) => i.value);
-  const onlySc = lists.length > 0 && lists.every((l) => l.startsWith("sc:"));
-  $("#make").disabled = true;
-  $("#make-status").textContent = "Building your set…";
-  try {
-    SET = await api("/api/set", {
-      mood: MOOD, lists, source: onlySc ? "soundcloud" : null, length: +$("#length").value,
-      curve: $("#curve").value, use_style: $("#use-style").checked,
-    });
-    Object.keys(RATINGS).forEach((k) => delete RATINGS[k]);
-    renderSet();
-    $("#make-status").textContent = "";
-  } catch (e) {
-    $("#make-status").textContent = e.message;
-  } finally {
-    $("#make").disabled = false;
-  }
-});
+$("#make").addEventListener("click", (ev) => busy(ev.currentTarget, async () => {
+  spinning(true);
+  const minShow = new Promise((r) => setTimeout(r, 1200));  // long enough to see, never a flicker
+  try { await Promise.all([makeSet(), minShow]); } finally { spinning(false); }
+}));
 
-function energyClass(e, t) { const d = Math.abs(e - t); return d <= 1.5 ? "e-good" : d <= 3 ? "e-warn" : "e-bad"; }
+async function makeSet() {
+  const lists = $$("#lists input:checked").map((i) => i.value);
+  const onlySc = lists.length > 0 && lists.every((l) => l.startsWith("sc:"));
+  SET = await api("/api/set", {
+    mood: MOOD, lists, source: onlySc ? "soundcloud" : null, length: LENGTH,
+    curve: $("#curve").value, use_style: $("#use-style").checked,
+  });
+  Object.keys(RATINGS).forEach((k) => delete RATINGS[k]);
+  OVERALL = 0;
+  renderSet();
+  $("#result").classList.remove("hidden");
+  $("#result .section-title").scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
 function renderSet() {
-  $("#result").classList.remove("hidden");
   const n = SET.tracks.length;
   const harmonic = SET.report[0].match(/(\d+)\/(\d+)/);
-  $("#chips").innerHTML = [
-    `<span class="chip">${n} tracks · ${Math.round(SET.length_min)} min · ${esc(SET.curve)}</span>`,
-    harmonic ? `<span class="chip">harmonic mixes <b>${harmonic[1]}/${harmonic[2]}</b></span>` : "",
-    `<span class="chip"><b>${SET.vs_random_pct}%</b> smoother than random</span>`,
-    SET.bpm_guessed ? `<span class="chip">energy guessed from BPM for ${SET.bpm_guessed}/${n} (star-rate tracks to improve)</span>` : "",
+  $("#stats").innerHTML = [
+    `<div class="stat hl"><b>${n}</b><span>tracks</span></div>`,
+    `<div class="stat"><b>${Math.round(SET.length_min)} min</b><span>${esc(SET.curve)}</span></div>`,
+    harmonic ? `<div class="stat"><b>${harmonic[1]}/${harmonic[2]}</b><span>mixes in key</span></div>` : "",
+    `<div class="stat"><b>${SET.vs_random_pct}%</b><span>smoother than a random order</span></div>`,
+    SET.bpm_guessed ? `<div class="stat warn"><b>Energy is guessed</b><span>for ${SET.bpm_guessed} of ${n} tracks. Star-rate them in rekordbox for better results.</span></div>` : "",
   ].join("");
   $("#set-notes").innerHTML = [...SET.notes, ...SET.report.slice(1)].map((t) => `<li>${esc(t)}</li>`).join("");
   drawChart();
   $("#tracks").innerHTML = SET.tracks.map((t) => `
-    <details class="track">
+    <details class="track" id="trk-${t.n}">
       <summary>
-        <span class="n">${t.n}</span><span class="t">${t.time}</span>
-        <span class="name"><b>${esc(t.title)}</b><span>${esc(t.artist)}</span></span>
-        <span class="bpm">${t.bpm} BPM</span><span class="key">${esc(t.key)}</span>
-        <span class="en ${energyClass(t.energy, t.target)}">E ${Math.round(t.energy)}</span>
-        ${t.technique ? `<span class="tech ${t.technique_id}">${esc(t.technique)}</span>` : `<span class="tech">opener</span>`}
+        <span class="n">${t.n}</span>
+        <span class="name"><b>${esc(t.title)}</b><span>${esc(t.artist)} · ${t.time}</span></span>
+        <span class="meta">
+          <span class="tag">${t.bpm} BPM</span><span class="tag">${esc(t.key)}</span>
+          <span class="ebar" title="energy ${Math.round(t.energy)}/10"><i style="width:${Math.min(100, t.energy * 10)}%"></i></span>
+          ${t.technique ? `<span class="tech ${esc(t.technique_id)}">${esc(t.technique)}</span>` : `<span class="tech">▶ Opener</span>`}
+        </span>
       </summary>
-      <div class="how">${t.n === 1 ? `<p class="muted">Start the set with this track.</p>` : howHtml(t)}</div>
+      <div class="how">${t.n === 1 ? `<p class="muted">Start the set with this track. Load it on deck 1 and press play.</p>` : howHtml(t)}</div>
     </details>`).join("");
   renderRate();
 }
 
 function howHtml(t) {
   let h = `<p class="muted">${esc(t.transition)}</p>`;
-  if (t.timing.length) h += `<h4>When</h4><ul>${t.timing.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>`;
-  h += `<h4>How</h4><ol>${t.steps.map((x) => `<li>${esc(x)}</li>`).join("")}</ol>`;
+  if (t.timing.length) h += `<h4>⏱ When</h4><ul>${t.timing.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>`;
+  h += `<h4>🎚 How</h4><ol>${t.steps.map((x) => `<li>${esc(x)}</li>`).join("")}</ol>`;
   if (t.advice_notes.length) h += `<ul class="muted">${t.advice_notes.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>`;
-  if (t.alternative) h += `<p class="muted">Alternative: ${esc(t.alternative)}</p>`;
-  if (t.bridge) h += `<p>Smoother route: play <b>${esc(t.bridge)}</b> in between.</p>`;
+  if (t.alternative) h += `<p class="muted">Or instead: ${esc(t.alternative)}</p>`;
+  if (t.bridge) h += `<div class="bridge">💡 Smoother route: play <b>${esc(t.bridge)}</b> in between.</div>`;
   return h;
 }
 
+// Energy chart, drawn as SVG (no internet needed).
 function drawChart() {
-  if (!window.Chart) return;
-  const steps = SET.tracks.map((t) => ({ x: t.start_min, y: t.energy }));
-  if (steps.length) steps.push({ x: SET.length_min, y: steps[steps.length - 1].y });
-  if (CHART) CHART.destroy();
-  CHART = new Chart($("#chart"), {
-    type: "line",
-    data: { datasets: [
-      { label: "target energy", data: SET.curve_points, borderColor: "#ff6a3d", pointRadius: 0, tension: 0.3 },
-      { label: "your set", data: steps, borderColor: "#3d9bff", stepped: true, pointRadius: 2 },
-    ] },
-    options: {
-      maintainAspectRatio: false, parsing: false,
-      scales: {
-        x: { type: "linear", min: 0, max: SET.length_min, title: { display: true, text: "minutes", color: "#9aa3b2" }, ticks: { color: "#9aa3b2" }, grid: { color: "#2a2f3a" } },
-        y: { min: 0, max: 10.5, title: { display: true, text: "energy", color: "#9aa3b2" }, ticks: { color: "#9aa3b2" }, grid: { color: "#2a2f3a" } },
-      },
-      plugins: { legend: { labels: { color: "#e8eaf0" } } },
-    },
+  const W = 820, H = 250, L = 34, R = 12, T = 12, B = 30;
+  const len = SET.length_min || 1;
+  const x = (m) => L + (m / len) * (W - L - R);
+  const y = (e) => T + (1 - e / 10) * (H - T - B);
+  let grid = "";
+  for (const e of [0, 2.5, 5, 7.5, 10]) grid += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(e)}" y2="${y(e)}"/>`;
+  grid += `<text class="axis" x="${L - 8}" y="${y(10) + 4}" text-anchor="end">peak</text><text class="axis" x="${L - 8}" y="${y(0) + 4}" text-anchor="end">chill</text>`;
+  const step = len > 90 ? 20 : len > 45 ? 10 : 5;
+  for (let m = 0; m <= len + 0.01; m += step) grid += `<text class="axis" x="${x(m)}" y="${H - 8}" text-anchor="middle">${Math.round(m)} min</text>`;
+  const target = SET.curve_points.map((p, i) => `${i ? "L" : "M"}${x(p.x).toFixed(1)},${y(p.y).toFixed(1)}`).join("");
+  let line = "";
+  SET.tracks.forEach((t, i) => {
+    const x0 = x(t.start_min), x1 = x(i + 1 < SET.tracks.length ? SET.tracks[i + 1].start_min : len);
+    line += `${i ? "L" : "M"}${x0.toFixed(1)},${y(t.energy).toFixed(1)}L${x1.toFixed(1)},${y(t.energy).toFixed(1)}`;
   });
+  const area = `${line}L${x(len)},${y(0)}L${x(0)},${y(0)}Z`;
+  const dots = SET.tracks.map((t) => `<circle class="dotpt" data-n="${t.n}" cx="${x(t.start_min)}" cy="${y(t.energy)}" r="4.5" fill="#fff" stroke="#ff3d8b" stroke-width="2">
+      <title>${t.n}. ${esc(t.title)} (energy ${Math.round(t.energy)}) at ${t.time}</title></circle>`).join("");
+  $("#chart").innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Energy chart">
+    <defs>
+      <linearGradient id="ln" x1="0" x2="1"><stop offset="0" stop-color="#ff7a45"/><stop offset="1" stop-color="#ff3d8b"/></linearGradient>
+      <linearGradient id="ar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff3d8b" stop-opacity=".35"/><stop offset="1" stop-color="#ff3d8b" stop-opacity="0"/></linearGradient>
+    </defs>
+    ${grid}
+    <path d="${area}" fill="url(#ar)"/>
+    <path d="${target}" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2" stroke-dasharray="6 5"/>
+    <path d="${line}" fill="none" stroke="url(#ln)" stroke-width="3" stroke-linejoin="round"/>
+    ${dots}
+  </svg>`;
+  $$("#chart .dotpt").forEach((d) => d.addEventListener("click", () => {
+    const el = $(`#trk-${d.dataset.n}`);
+    el.open = true;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
+  }));
 }
 
 // ---------- push to rekordbox ----------
-$("#push").addEventListener("click", async () => {
-  $("#push").disabled = true;
-  $("#push-status").innerHTML = `<p class="muted">Writing to rekordbox…</p>`;
-  try {
+$("#push").addEventListener("click", (ev) => {
+  if (RB_OPEN) return toast("rekordbox is still open. Quit it first (Cmd+Q on a Mac), then press Send again.", "err", 7000);
+  busy(ev.currentTarget, async () => {
     const r = await api("/api/push", { name: $("#set-name").value.trim() || null, cues: $("#with-cues").checked });
-    $("#push-status").innerHTML = `<div class="banner ok">Done! Open rekordbox → left sidebar → <b>Playlists</b> (rekordbox's own, at the top, not the SoundCloud section) → <b>${esc(r.folder)}</b> → <b>${esc(r.name)}</b> (${r.tracks} tracks).
-      ${r.cues ? `<br>Added ${r.cues} hot cues (E = cue here, F = drop / swap basses, G = start next track).` : ""}
-      ${r.cues_skipped ? `<br>${r.cues_skipped} cues skipped (no free pad).` : ""}
-      <br><span class="small">Backup of your library from just before: ${esc(r.backup)}</span></div>`;
-  } catch (e) {
-    $("#push-status").innerHTML = `<div class="banner err">${esc(e.message)}</div>`;
-  } finally {
-    $("#push").disabled = false;
-  }
+    $("#push-status").innerHTML = `<div class="banner ok"><div>🎉 <b>It's in rekordbox!</b> Open rekordbox → left sidebar → <b>Playlists</b>
+      (rekordbox's own, at the top, not SoundCloud) → <b>${esc(r.folder)}</b> → <b>${esc(r.name)}</b> (${r.tracks} tracks).
+      ${r.cues ? `<br>Added ${r.cues} hot cues.` : ""}${r.cues_skipped ? ` ${r.cues_skipped} skipped because the pad was already used.` : ""}
+      <br><span class="small muted">If anything looks wrong: Settings → Undo last change.</span></div></div>`;
+  });
 });
 
 // ---------- my music ----------
 function renderMusic() {
   const sc = STATUS.soundcloud;
   if (sc) $("#sc-user").value = `https://soundcloud.com/${sc.user}`;
-  $("#sc-status").textContent = sc ? `Last synced ${sc.synced_at.replace("T", " ").slice(0, 16)}` : "";
-  $("#sc-lists").innerHTML = STATUS.soundcloud_lists.length ? `<table class="fb"><tr><th>List</th><th>On SoundCloud</th><th>Ready in rekordbox</th></tr>
-    ${STATUS.soundcloud_lists.map((l) => `<tr><td>${esc(l.name)}</td><td>${l.total}</td><td>${l.ready}</td></tr>`).join("")}</table>
-    <p class="muted">${STATUS.not_analysed} tracks still need analysing in rekordbox (see below).</p>` : "";
+  $("#sc-status").textContent = sc ? `Last synced ${when(sc.synced_at)}` : "Not connected yet.";
+  $("#sc-lists").innerHTML = STATUS.soundcloud_lists.length ? `<table class="sc-table">
+      <tr><th>List</th><th>Ready to use</th><th></th></tr>
+      ${STATUS.soundcloud_lists.map((l) => `<tr><td>${esc(l.name)}</td>
+        <td><div class="progress"><i style="width:${l.total ? (100 * l.ready) / l.total : 0}%"></i></div></td>
+        <td class="num">${l.ready} of ${l.total}</td></tr>`).join("")}
+    </table>` : "";
+  $("#missing-card").classList.toggle("hidden", !sc || !STATUS.not_analysed);
   const bs = STATUS.library.by_source;
-  $("#library").textContent = `${STATUS.library.total} tracks: ` + Object.entries(bs).map(([k, v]) => `${v} ${k}`).join(", ") +
-    (STATUS.rekordbox_running ? " · rekordbox is open" : " · rekordbox is closed");
+  $("#library").innerHTML = `<div class="stat"><b>${STATUS.library.total}</b><span>tracks in total</span></div>` +
+    Object.entries(bs).map(([k, v]) => `<div class="stat"><b>${v}</b><span>${esc(k === "local" ? "files" : k)}</span></div>`).join("");
 }
 
-$("#sc-sync").addEventListener("click", async () => {
-  $("#sc-sync").disabled = true;
+async function syncSoundCloud(user) {
+  STATUS = await api("/api/soundcloud/sync", { user });
+  renderLists(); renderMusic();
+  loadMoods();
+  return STATUS;
+}
+
+$("#sc-sync").addEventListener("click", (ev) => busy(ev.currentTarget, async () => {
   $("#sc-status").textContent = "Syncing… this can take a minute.";
-  try {
-    STATUS = await api("/api/soundcloud/sync", { user: $("#sc-user").value });
-    renderLists(); renderMusic(); banner("SoundCloud synced. Now go to <b>Make a set</b>.", "ok");
-  } catch (e) {
-    $("#sc-status").textContent = e.message;
-  } finally {
-    $("#sc-sync").disabled = false;
-  }
-});
+  await syncSoundCloud($("#sc-user").value);
+  await loadStatus();
+  toast("SoundCloud synced 🎉");
+}));
 
-$("#reload").addEventListener("click", async () => {
-  $("#reload").disabled = true;
-  try { STATUS = await api("/api/reload", {}); renderLists(); renderMusic(); } catch (e) { banner(esc(e.message), "err"); }
-  $("#reload").disabled = false;
-});
+$("#reload").addEventListener("click", (ev) => busy(ev.currentTarget, async () => {
+  STATUS = await api("/api/reload", {});
+  await loadStatus(); loadMoods();
+  toast("Library reloaded.");
+}));
 
-$("#show-missing").addEventListener("click", async () => {
+$("#show-missing").addEventListener("click", (ev) => busy(ev.currentTarget, async () => {
   const r = await api("/api/soundcloud/missing");
-  $("#missing").innerHTML = r.tracks.map((t) => `<li>${t.url ? `<a href="${esc(t.url)}" target="_blank" style="color:#9fd0ff">${esc(t.label)}</a>` : esc(t.label)}</li>`).join("") || "<li>None, everything is analysed.</li>";
+  $("#missing").innerHTML = r.tracks.map((t) => `<li>${t.url ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.label)}</a>` : esc(t.label)}</li>`).join("") || "<li>None, everything is analysed.</li>";
+}));
+
+$("#moods-push").addEventListener("click", (ev) => {
+  if (RB_OPEN) return toast("Quit rekordbox first, then press the button again.", "err");
+  busy(ev.currentTarget, async () => {
+    const r = await api("/api/moods/push", {});
+    $("#moods-push-status").innerHTML = `<div class="banner ok" style="margin-top:14px">Done! In rekordbox: <b>Playlists → ${esc(r.folder)}</b>.<br>` +
+      Object.entries(r.playlists).map(([k, v]) => `${esc(k)} (${v})`).join(" · ") + "</div>";
+  });
 });
 
 // ---------- discover ----------
 function renderDiscover(d) {
   if (!d.tracks || !d.tracks.length) {
-    $("#discover-list").innerHTML = `<p class="muted">Nothing yet. Press <b>Find new tracks</b> (takes about a minute).</p>`;
+    $("#discover-list").innerHTML = `<div class="card empty" style="grid-column:1/-1">🔭<p>Nothing yet. Press <b>Find new tracks</b>. It takes about a minute.</p></div>`;
     return;
   }
-  $("#discover-status").textContent = d.made_at ? `Last search ${d.made_at.replace("T", " ").slice(0, 16)}` : "";
+  $("#discover-status").textContent = d.made_at ? `Last search ${when(d.made_at)}` : "";
   $("#discover-list").innerHTML = d.tracks.map((c) => `
     <div class="disc">
-      <div><b>${esc(c.title)}</b><span class="why">${esc(c.uploader)} · ${esc(c.why)}</span></div>
-      <span class="mood-g small">${esc(c.mood_guess || "")}</span>
-      <span class="likes small muted">${(c.likes || 0).toLocaleString()} ♥</span>
-      <a class="open" href="${esc(c.url)}" target="_blank" rel="noopener">Open ↗</a>
+      <b>${esc(c.title)}</b><span class="who">${esc(c.uploader)}</span><span class="why">${esc(c.why)}</span>
+      <div class="foot">
+        ${c.mood_guess ? `<span class="tag">${esc(c.mood_guess)}</span>` : ""}
+        <span class="tag">${(c.likes || 0).toLocaleString()} ♥</span>
+        <a class="open" href="${esc(c.url)}" target="_blank" rel="noopener">Open on SoundCloud ↗</a>
+      </div>
     </div>`).join("");
 }
 
@@ -249,91 +334,233 @@ async function loadDiscover() {
   try { renderDiscover(await api("/api/discover")); } catch (e) { $("#discover-status").textContent = e.message; }
 }
 
-$("#discover-run").addEventListener("click", async () => {
-  $("#discover-run").disabled = true;
+$("#discover-run").addEventListener("click", (ev) => busy(ev.currentTarget, async () => {
   $("#discover-status").textContent = "Searching SoundCloud… about a minute.";
-  try { renderDiscover(await api("/api/discover", {})); }
-  catch (e) { $("#discover-status").textContent = e.message; }
-  $("#discover-run").disabled = false;
-});
+  renderDiscover(await api("/api/discover", {}));
+}));
 
 // ---------- rate ----------
 function renderRate() {
   if (!SET || SET.tracks.length < 2) return;
+  $("#rate-overall").classList.remove("hidden");
   $("#rate-list").innerHTML = SET.tracks.slice(1).map((t) => {
     const prev = SET.tracks[t.n - 2];
     const r = RATINGS[t.n] || {};
     return `<div class="rate-row" data-pos="${t.n}">
-      <div><b>${t.n - 1} → ${t.n}</b> ${esc(prev.title)} → ${esc(t.title)} <span class="muted small">(${esc(t.technique || "")})</span></div>
-      <div class="thumbs"><button data-v="good" class="${r.good === true ? "on-good" : ""}">👍</button><button data-v="bad" class="${r.good === false ? "on-bad" : ""}">👎</button></div>
-      <input placeholder="note, e.g. vocals clashed" value="${esc(r.note || "")}">
+      <div class="pair"><span class="muted small">${t.n - 1} → ${t.n} · ${esc(t.technique || "")}</span><br>
+        <b>${esc(prev.title)}</b><span class="arrow">→</span><b>${esc(t.title)}</b></div>
+      <div class="thumbs"><button data-v="good" class="${r.good === true ? "on-good" : ""}" title="Sounded good">👍</button><button data-v="bad" class="${r.good === false ? "on-bad" : ""}" title="Didn't work">👎</button></div>
+      <input placeholder="Note, e.g. vocals clashed" value="${esc(r.note || "")}">
     </div>`;
   }).join("");
-  document.querySelectorAll(".rate-row").forEach((row) => {
+  $$(".rate-row").forEach((row) => {
     const pos = +row.dataset.pos;
     row.querySelectorAll(".thumbs button").forEach((b) => b.addEventListener("click", () => {
       RATINGS[pos] = { ...(RATINGS[pos] || {}), good: b.dataset.v === "good" };
-      renderRate();
+      row.querySelectorAll(".thumbs button").forEach((x) => x.className = x === b ? (b.dataset.v === "good" ? "on-good" : "on-bad") : "");
     }));
     row.querySelector("input").addEventListener("input", (e) => { RATINGS[pos] = { ...(RATINGS[pos] || {}), note: e.target.value }; });
   });
+  renderStars();
 }
 
-$("#rate-save").addEventListener("click", async () => {
+function renderStars() {
+  $("#stars").innerHTML = [1, 2, 3, 4, 5].map((i) => `<button data-v="${i}" class="${i <= OVERALL ? "on" : ""}" title="${i} star${i > 1 ? "s" : ""}">★</button>`).join("");
+  $$("#stars button").forEach((b) => b.addEventListener("click", () => { OVERALL = +b.dataset.v; renderStars(); }));
+}
+
+$("#rate-save").addEventListener("click", (ev) => busy(ev.currentTarget, async () => {
   const ratings = Object.entries(RATINGS).filter(([, r]) => r.good !== undefined)
     .map(([pos, r]) => ({ position: +pos, good: r.good, note: r.note || "" }));
-  try {
-    const r = await api("/api/rate", { ratings, overall: +$("#overall").value, overall_note: $("#overall-note").value });
-    $("#rate-status").textContent = `Saved ${r.saved} ratings. Thanks!`;
-    loadFeedback();
-  } catch (e) { $("#rate-status").textContent = e.message; }
-});
+  const r = await api("/api/rate", { ratings, overall: OVERALL, overall_note: $("#overall-note").value });
+  toast(`Saved ${r.saved} rating${r.saved === 1 ? "" : "s"}. Thanks, djnext learns from this!`);
+  loadFeedback();
+}));
 
 async function loadFeedback() {
   const f = await api("/api/feedback");
   if (!f.rated) return ($("#feedback").textContent = "No ratings yet.");
   const titles = { technique: "By mixing technique", key: "By key move", tempo: "By tempo change" };
-  let h = `<p><b>${f.good}/${f.rated}</b> transitions rated good (${Math.round((100 * f.good) / f.rated)}%)</p>`;
+  let h = `<div class="stats"><div class="stat hl"><b>${Math.round((100 * f.good) / f.rated)}%</b><span>of ${f.rated} transitions sounded good</span></div></div>`;
   for (const [g, buckets] of Object.entries(f.groups)) {
-    h += `<b>${titles[g]}</b><table class="fb">` + Object.entries(buckets).map(([name, [good, n]]) =>
+    h += `<b>${titles[g] || esc(g)}</b><table class="fb">` + Object.entries(buckets).map(([name, [good, n]]) =>
       `<tr><td>${esc(name.replace("_", " "))}</td><td>${good}/${n}</td><td class="${good / n >= 0.75 ? "e-good" : good / n >= 0.5 ? "e-warn" : "e-bad"}">${Math.round((100 * good) / n)}%</td></tr>`).join("") + "</table>";
   }
   if (f.bad.length) h += `<b>Didn't work</b><ul>${f.bad.map(([p, n]) => `<li>${esc(p)}${n ? ` <span class="muted">(${esc(n)})</span>` : ""}</li>`).join("")}</ul>`;
   $("#feedback").innerHTML = h;
 }
 
+// ---------- tag inputs (artists, genres) ----------
+function tagInput(el, placeholder) {
+  let items = [];
+  const render = () => {
+    el.innerHTML = items.map((t, i) => `<span class="t">${esc(t)}<button data-i="${i}" title="Remove">×</button></span>`).join("") +
+      `<input placeholder="${esc(placeholder)}">`;
+    el.querySelectorAll(".t button").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); items.splice(+b.dataset.i, 1); render(); }));
+    const inp = el.querySelector("input");
+    const add = () => { const v = inp.value.replace(/,$/, "").trim(); if (v && !items.includes(v)) items.push(v); inp.value = ""; render(); el.querySelector("input").focus(); };
+    inp.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === ",") { e.preventDefault(); add(); }
+      else if (e.key === "Backspace" && !inp.value && items.length) { items.pop(); render(); el.querySelector("input").focus(); }
+    });
+    inp.addEventListener("blur", () => { if (inp.value.trim()) add(); });
+  };
+  el.addEventListener("click", () => el.querySelector("input").focus());
+  render();
+  return { get: () => { const v = el.querySelector("input").value.trim(); return v && !items.includes(v) ? [...items, v] : [...items]; },
+           set: (arr) => { items = [...arr]; render(); } };
+}
+const FAVS = tagInput($("#favs"), "Type an artist, press Enter");
+const EXCL = tagInput($("#excl"), "Type a genre, press Enter");
+const WIZ_FAVS = tagInput($("#wiz-favs"), "e.g. Fisher, press Enter");
+
+function presetButtons(el, onPick) {
+  el.innerHTML = PRESETS.map((p, i) => `<button data-i="${i}">${esc(p.name)} <small>${p.bpm[0]}–${p.bpm[1]}</small></button>`).join("");
+  el.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+    el.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+    onPick(PRESETS[+b.dataset.i]);
+  }));
+}
+function markPreset(el, st) {
+  el.querySelectorAll("button").forEach((b) => {
+    const p = PRESETS[+b.dataset.i];
+    b.classList.toggle("on", p.bpm[0] === st.bpm_min && p.bpm[1] === st.bpm_max);
+  });
+}
+
+function choice(el, value) {
+  el.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.v === value));
+}
+function choiceValue(el) { return (el.querySelector("button.on") || {}).dataset?.v || "beginner"; }
+$$(".choice").forEach((el) => el.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => choice(el, b.dataset.v))));
+
 // ---------- settings ----------
+presetButtons($("#presets"), (p) => { $("#bpm-min").value = p.bpm[0]; $("#bpm-max").value = p.bpm[1]; EXCL.set(p.out); });
+
 function renderSettings() {
   const st = STATUS.style;
   $("#bpm-min").value = st.bpm_min; $("#bpm-max").value = st.bpm_max;
-  $("#skill").value = STATUS.skill || "beginner";
-  $("#favs").value = st.favourite_artists.join("\n"); $("#excl").value = st.exclude_genres.join("\n");
+  choice($("#skill"), STATUS.skill || "beginner");
+  FAVS.set(st.favourite_artists); EXCL.set(st.exclude_genres);
+  markPreset($("#presets"), st);
 }
 
-$("#save-style").addEventListener("click", async () => {
-  const lines = (s) => s.split("\n").map((x) => x.trim()).filter(Boolean);
-  try {
-    STATUS = await api("/api/settings", {
-      skill: $("#skill").value, bpm_min: +$("#bpm-min").value, bpm_max: +$("#bpm-max").value,
-      favourite_artists: lines($("#favs").value), exclude_genres: lines($("#excl").value),
-    });
-    $("#style-status").textContent = "Saved.";
-    $("#style-hint").textContent = `(${STATUS.style.bpm_min}–${STATUS.style.bpm_max} BPM)`;
-  } catch (e) { $("#style-status").textContent = e.message; }
-});
+async function saveSettings(extra = {}) {
+  STATUS = await api("/api/settings", {
+    skill: choiceValue($("#skill")), bpm_min: +$("#bpm-min").value, bpm_max: +$("#bpm-max").value,
+    favourite_artists: FAVS.get(), exclude_genres: EXCL.get(), ...extra,
+  });
+  $("#style-hint").textContent = `(${STATUS.style.bpm_min}–${STATUS.style.bpm_max} BPM)`;
+  renderSettings();
+  loadMoods();
+}
 
-$("#undo").addEventListener("click", async () => {
+$("#save-style").addEventListener("click", (ev) => busy(ev.currentTarget, async () => { await saveSettings(); toast("Saved. Your moods are updated."); }));
+
+$("#undo").addEventListener("click", async (ev) => {
   const b = await api("/api/backups");
-  if (!b.backups.length) return ($("#undo-status").textContent = "Nothing to undo yet.");
-  if (!confirm(`Put rekordbox back to how it was at ${b.backups[0]}? (rekordbox must be closed)`)) return;
-  try { const r = await api("/api/undo", {}); $("#undo-status").textContent = `Done: back to ${r.restored}. You can open rekordbox now.`; loadStatus(); }
-  catch (e) { $("#undo-status").textContent = e.message; }
+  if (!b.backups.length) return toast("Nothing to undo yet: djnext hasn't changed rekordbox.", "ok");
+  if (RB_OPEN) return toast("Quit rekordbox first, then press Undo again.", "err");
+  if (!confirm(`Put rekordbox back to how it was before djnext's last change (${b.backups[0]})?`)) return;
+  busy(ev.currentTarget, async () => {
+    await api("/api/undo", {});
+    toast("Done! rekordbox is back to how it was. You can open it now.");
+    loadStatus();
+  });
 });
 
-$("#remove-cues").addEventListener("click", async () => {
-  if (!confirm("Remove all hot cues made by djnext from every track? Your own cues stay.")) return;
-  try { const r = await api("/api/cues/remove", {}); $("#cues-status").textContent = `Removed ${r.removed} cues.`; }
-  catch (e) { $("#cues-status").textContent = e.message; }
+$("#remove-cues").addEventListener("click", (ev) => {
+  if (RB_OPEN) return toast("Quit rekordbox first.", "err");
+  if (!confirm("Remove every hot cue djnext added? Your own cues stay.")) return;
+  busy(ev.currentTarget, async () => { const r = await api("/api/cues/remove", {}); toast(`Removed ${r.removed} cues.`); });
 });
 
-loadStatus().then(loadMoods);
+$("#rerun-setup").addEventListener("click", () => openWizard());
+
+// ---------- first-run setup ----------
+let WIZ_STEP = 0, WIZ_PRESET = null;
+function wizGo(i) {
+  WIZ_STEP = i;
+  $$(".wiz-step").forEach((s) => s.classList.toggle("on", +s.dataset.step === i));
+  $$(".wiz-dots span").forEach((d, j) => d.classList.toggle("on", j <= i));
+}
+function openWizard() {
+  $("#wizard").classList.remove("hidden");
+  const lib = STATUS && STATUS.library;
+  const note = $("#wiz-lib");
+  if (lib) { note.className = "wiz-note ok"; note.textContent = `✓ Found your rekordbox library: ${lib.total} tracks.`; }
+  else { note.className = "wiz-note err"; note.textContent = "Couldn't find your rekordbox library. Is rekordbox installed and opened at least once?"; }
+  if (STATUS && STATUS.soundcloud) $("#wiz-sc").value = `https://soundcloud.com/${STATUS.soundcloud.user}`;
+  if (STATUS) { WIZ_FAVS.set(STATUS.onboarded ? STATUS.style.favourite_artists : []); choice($("#wiz-skill"), STATUS.skill || "beginner"); }
+  wizGo(0);
+}
+$$("#wizard [data-next]").forEach((b) => b.addEventListener("click", () => wizGo(WIZ_STEP + 1)));
+$$("#wizard [data-back]").forEach((b) => b.addEventListener("click", () => wizGo(WIZ_STEP - 1)));
+$$("#wizard [data-skip]").forEach((b) => b.addEventListener("click", () => wizGo(WIZ_STEP + 1)));
+presetButtons($("#wiz-presets"), (p) => { WIZ_PRESET = p; });
+
+$("#wiz-sc-go").addEventListener("click", async (ev) => {
+  const v = $("#wiz-sc").value.trim();
+  const st = $("#wiz-sc-status");
+  if (!v) { st.className = "wiz-note err"; st.textContent = "Paste your profile link first (or press I don't use SoundCloud)."; return; }
+  st.className = "wiz-note"; st.textContent = "Reading your likes and playlists… this can take a minute.";
+  const btn = ev.currentTarget;
+  btn.classList.add("loading");
+  try {
+    const s = await syncSoundCloud(v);
+    const total = s.soundcloud_lists.reduce((a, l) => a + l.total, 0);
+    st.className = "wiz-note ok"; st.textContent = `✓ Found ${total} tracks in ${s.soundcloud_lists.length} lists.`;
+    setTimeout(() => wizGo(2), 900);
+  } catch (e) {
+    st.className = "wiz-note err"; st.textContent = e.message;
+  } finally { btn.classList.remove("loading"); }
+});
+
+$("#wiz-done").addEventListener("click", (ev) => busy(ev.currentTarget, async () => {
+  const p = WIZ_PRESET;
+  STATUS = await api("/api/settings", {
+    skill: choiceValue($("#wiz-skill")),
+    bpm_min: p ? p.bpm[0] : STATUS.style.bpm_min, bpm_max: p ? p.bpm[1] : STATUS.style.bpm_max,
+    favourite_artists: WIZ_FAVS.get(), exclude_genres: p ? p.out : STATUS.style.exclude_genres, onboarded: true,
+  });
+  $("#wizard").classList.add("hidden");
+  await loadStatus();
+  loadMoods();
+  toast("All set! Pick a mood and press <b>Make my set</b>.", "ok", 6000);
+}));
+
+// ---------- DJ touches ----------
+function drawWave() {  // a rekordbox-style waveform strip behind the heading
+  let h = "";
+  for (let i = 0; i < 140; i++) {
+    const v = 0.25 + 0.75 * Math.abs(Math.sin(i * 0.37) * Math.cos(i * 0.11) + 0.35 * Math.sin(i * 1.7));
+    h += `<i class="${i < 46 ? "played" : ""}" style="height:${Math.min(100, v * 85)}%"></i>`;
+  }
+  $("#wave").innerHTML = h;
+}
+const SPIN_MSGS = ["Digging through your crates…", "Matching keys…", "Lining up the drops…", "Shaping the energy curve…"];
+function spinning(on) {
+  $("#spinning").classList.toggle("hidden", !on);
+  clearInterval(spinning.t);
+  if (on) {
+    let i = 0;
+    $("#spin-msg").textContent = SPIN_MSGS[0];
+    spinning.t = setInterval(() => { $("#spin-msg").textContent = SPIN_MSGS[++i % SPIN_MSGS.length]; }, 900);
+  }
+}
+
+// ---------- live window ----------
+$("#open-live").addEventListener("click", () => {
+  if (window.pywebview) window.pywebview.api.open_live();  // the Mac app: a small window next to rekordbox
+  else window.open("/live", "djnext-live", "width=420,height=900");
+});
+
+// ---------- start ----------
+(async () => {
+  drawWave();
+  pollRekordbox();
+  const ok = await loadStatus();
+  if (!ok) return;
+  loadMoods();
+  if (!STATUS.onboarded) openWizard();
+})();

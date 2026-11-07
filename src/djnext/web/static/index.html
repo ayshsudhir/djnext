@@ -4,138 +4,184 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>djnext</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💿</text></svg>">
   <link rel="stylesheet" href="/static/app.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
-  <header>
-    <div class="brand">djnext <span>set builder for rekordbox</span></div>
-    <nav>
-      <button data-tab="make" class="active">Make a set</button>
-      <button data-tab="music">My music</button>
-      <button data-tab="discover">Discover</button>
-      <button data-tab="rate">Rate</button>
-      <button data-tab="settings">Settings</button>
+  <header class="top">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 40 40" aria-hidden="true">
+        <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7a45"/><stop offset="1" stop-color="#ff3d8b"/></linearGradient></defs>
+        <circle cx="20" cy="20" r="18" fill="url(#lg)"/><circle cx="20" cy="20" r="11" fill="none" stroke="#0c0b12" stroke-opacity=".35" stroke-width="1.2"/>
+        <circle cx="20" cy="20" r="7" fill="none" stroke="#0c0b12" stroke-opacity=".35" stroke-width="1.2"/><circle cx="20" cy="20" r="3.2" fill="#0c0b12"/>
+      </svg>
+      <span>djnext</span>
+      <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+    </div>
+    <nav id="nav">
+      <button data-tab="make" class="active"><span class="ic">✨</span><span class="lbl">Make a set</span></button>
+      <button data-tab="music"><span class="ic">🎧</span><span class="lbl">My music</span></button>
+      <button data-tab="discover"><span class="ic">🔭</span><span class="lbl">Discover</span></button>
+      <button data-tab="rate"><span class="ic">👍</span><span class="lbl">Rate</span></button>
+      <button data-tab="settings"><span class="ic">⚙️</span><span class="lbl">Settings</span></button>
     </nav>
+    <button id="open-live" class="live-btn" title="A small window to keep next to rekordbox while you play">🎚️ Go live</button>
+    <div id="rb-pill" class="pill" title="djnext can only write to rekordbox while rekordbox is closed">
+      <span class="dot"></span><span class="txt">rekordbox…</span>
+    </div>
   </header>
 
   <main>
     <div id="banner" class="banner hidden"></div>
 
-    <!-- MAKE A SET -->
+    <!-- ============ MAKE A SET ============ -->
     <section id="tab-make" class="tab">
-      <div class="card">
-        <h2>What mood of music do you want?</h2>
-        <div id="moods" class="moods"><p class="muted">Sorting your music into moods…</p></div>
+      <div class="hero">
+        <div id="wave" class="wave" aria-hidden="true"></div>
+        <h1>What's the vibe?</h1>
+        <p class="muted">Pick a mood and djnext orders your tracks into a set that flows: matching keys, tempos that work, and energy that builds.</p>
       </div>
 
-      <div class="card" id="lists-card">
-        <h2>1. Pick your music</h2>
-        <p class="muted small" id="mood-hint"></p>
-        <div id="lists" class="lists"><p class="muted">Loading your library…</p></div>
-        <div class="row">
-          <label>Length
-            <select id="length">
-              <option value="30">30 min</option><option value="45">45 min</option>
-              <option value="60" selected>60 min</option><option value="90">90 min</option>
-              <option value="120">2 hours</option>
-            </select>
-          </label>
-          <label>Energy shape <select id="curve"></select></label>
-          <label class="check"><input type="checkbox" id="use-style" checked> Only my style <span class="muted" id="style-hint"></span></label>
+      <div id="moods" class="moods"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+
+      <div class="card make-bar">
+        <div class="field">
+          <span class="label">How long?</span>
+          <div class="seg" id="length">
+            <button data-v="30">30 min</button><button data-v="45">45 min</button><button data-v="60" class="on">1 hour</button>
+            <button data-v="90">1½ hours</button><button data-v="120">2 hours</button>
+          </div>
         </div>
-        <button id="make" class="primary">Make a set</button>
-        <span id="make-status" class="muted"></span>
+        <button id="make" class="primary big">Make my set</button>
       </div>
+
+      <details class="card more" id="more-opts">
+        <summary>More options <span class="muted small">which lists to use, energy shape</span></summary>
+        <div class="more-body">
+          <p class="muted small" id="mood-hint"></p>
+          <div id="lists-wrap">
+            <span class="label">Use tracks from</span>
+            <div id="lists" class="lists"><p class="muted">Loading your library…</p></div>
+          </div>
+          <div class="row" id="curve-row">
+            <label>Energy shape <select id="curve"></select></label>
+            <label class="check"><input type="checkbox" id="use-style" checked> Only my style <span class="muted" id="style-hint"></span></label>
+          </div>
+        </div>
+      </details>
 
       <div id="result" class="hidden">
+        <div class="section-title"><span class="num">1</span><h2>Your set</h2></div>
+        <div id="stats" class="stats"></div>
         <div class="card">
-          <h2>2. Your set</h2>
-          <div id="chips" class="chips"></div>
-          <div class="chart-wrap"><canvas id="chart"></canvas></div>
-          <ul id="set-notes" class="small muted"></ul>
-        </div>
-
-        <div class="card">
-          <h2>3. Put it in rekordbox</h2>
-          <p class="muted">Creates the playlist under <b>Playlists → djnext</b> in rekordbox, with hot cues on the pads:
-            <b>E</b> = where to cue the track, <b>F</b> = its drop (swap the basses), <b>G</b> = start the next track here.
-            rekordbox has to be <b>closed</b> while this runs. Your library is backed up first.</p>
-          <div class="row">
-            <label>Playlist name <input id="set-name" placeholder="e.g. Friday warm-up"></label>
-            <label class="check"><input type="checkbox" id="with-cues" checked> Add hot cues</label>
-            <button id="push" class="primary">Send to rekordbox</button>
+          <div class="chart-head">
+            <h3>Energy through the set</h3>
+            <div class="legend"><span class="lg target"></span>target <span class="lg yours"></span>your set</div>
           </div>
-          <div id="push-status"></div>
+          <div id="chart" class="chart"></div>
+          <details class="notes"><summary class="small muted">Details about how this set was made</summary><ul id="set-notes" class="small muted"></ul></details>
         </div>
 
-        <div class="card">
-          <h2>4. Mix it: track by track</h2>
-          <p class="muted">Click a track to see when and how to mix into it.</p>
-          <div id="tracks"></div>
+        <div class="section-title"><span class="num">2</span><h2>Put it in rekordbox</h2></div>
+        <div class="card send">
+          <div class="send-main">
+            <ol class="steps-mini">
+              <li id="step-quit"><span class="tick"></span>Quit rekordbox</li>
+              <li><span class="tick"></span>Press <b>Send to rekordbox</b></li>
+              <li><span class="tick"></span>Open rekordbox → <b>Playlists → djnext</b></li>
+            </ol>
+            <div class="row">
+              <label class="grow">Playlist name <input id="set-name" placeholder="e.g. Friday warm-up"></label>
+              <label class="check"><input type="checkbox" id="with-cues" checked> Add hot cues</label>
+            </div>
+            <button id="push" class="primary">Send to rekordbox</button>
+            <div id="push-status"></div>
+          </div>
+          <div class="pads" title="Hot cues djnext puts on your FLX4 pads">
+            <div class="pad e"><b>E</b><span>Start here</span></div>
+            <div class="pad f"><b>F</b><span>Swap basses</span></div>
+            <div class="pad g"><b>G</b><span>Start next track</span></div>
+            <p class="small muted">Hot cue pads on your controller</p>
+          </div>
+        </div>
+
+        <div class="section-title"><span class="num">3</span><h2>Mix it, track by track</h2></div>
+        <p class="muted sub">Tap a track to see <b>when</b> and <b>how</b> to mix into it.</p>
+        <div id="tracks" class="tracks"></div>
+
+        <div class="after card">
+          <span>Mixed it? Tell djnext how it sounded so the next set is better.</span>
+          <button onclick="showTab('rate')">Rate this set</button>
         </div>
       </div>
     </section>
 
-    <!-- MY MUSIC -->
+    <!-- ============ MY MUSIC ============ -->
     <section id="tab-music" class="tab hidden">
+      <div class="hero small-hero"><h1>My music</h1><p class="muted">Where djnext gets your tracks from.</p></div>
       <div class="card">
-        <h2>SoundCloud</h2>
-        <p class="muted">Paste your SoundCloud profile link (or username). This reads your likes and playlists: track lists only, nothing is downloaded. Only public lists are visible.</p>
+        <div class="card-head"><span class="sc-badge">☁︎</span><div><h2>SoundCloud</h2>
+          <p class="muted small">Reads your likes and playlists: track lists only, nothing is downloaded. Only public lists are visible.</p></div></div>
         <div class="row">
-          <input id="sc-user" placeholder="https://soundcloud.com/your-name">
+          <input id="sc-user" class="grow" placeholder="https://soundcloud.com/your-name">
           <button id="sc-sync" class="primary">Sync</button>
-          <span id="sc-status" class="muted"></span>
         </div>
+        <p id="sc-status" class="muted small"></p>
         <div id="sc-lists"></div>
       </div>
-      <div class="card">
-        <h2>Mood playlists in rekordbox</h2>
-        <p class="muted">Creates one playlist per mood under <b>Playlists → djnext moods</b> (refreshed each time). rekordbox must be closed.</p>
-        <button id="moods-push">Create mood playlists</button>
-        <div id="moods-push-status"></div>
+
+      <div class="card" id="missing-card">
+        <h2>Tracks rekordbox hasn't analysed yet</h2>
+        <p class="muted">djnext needs each track's BPM and key from rekordbox. To fix these: in rekordbox, open them from the
+          <b>SoundCloud</b> section and add them to your collection (or load each on a deck once), then press <b>Reload library</b>.</p>
+        <div class="row">
+          <button id="reload">Reload library</button>
+          <button id="show-missing" class="ghost">Show the list</button>
+        </div>
+        <ol id="missing" class="small missing"></ol>
       </div>
-      <div class="card">
-        <h2>Not analysed by rekordbox yet</h2>
-        <p class="muted">These tracks have no BPM or key yet. In rekordbox, open them from the SoundCloud section and add them to your collection (or load them on a deck once). Then press <b>Reload library</b>.</p>
-        <button id="reload">Reload library</button>
-        <button id="show-missing">Show the list</button>
-        <ol id="missing" class="small"></ol>
-      </div>
-      <div class="card">
-        <h2>Your rekordbox library</h2>
-        <div id="library" class="muted"></div>
+
+      <div class="grid2">
+        <div class="card">
+          <h2>Your rekordbox library</h2>
+          <div id="library" class="libstats"></div>
+        </div>
+        <div class="card">
+          <h2>Mood playlists</h2>
+          <p class="muted small">Adds one rekordbox playlist per mood under <b>Playlists → djnext moods</b>. Quit rekordbox first.</p>
+          <button id="moods-push">Create mood playlists</button>
+          <div id="moods-push-status"></div>
+        </div>
       </div>
     </section>
 
-    <!-- DISCOVER -->
+    <!-- ============ DISCOVER ============ -->
     <section id="tab-discover" class="tab hidden">
-      <div class="card">
-        <h2>New tracks for you on SoundCloud</h2>
-        <p class="muted">Looks at SoundCloud's related tracks for your best tracks and searches your favourite artists, keeps
-          tracks that fit your genres, and ranks them. Nothing is downloaded.</p>
-        <p class="muted small"><b>To use them:</b> open a track and ♥ like it on SoundCloud → <b>My music → Sync</b> →
-          in rekordbox open SoundCloud → Likes, select the new tracks and add them to your collection (so rekordbox
-          analyses them) → <b>Reload library</b>. Then they're in your moods and sets.</p>
-        <button id="discover-run" class="primary">Find new tracks</button>
-        <span id="discover-status" class="muted"></span>
-        <div id="discover-list"></div>
+      <div class="hero small-hero">
+        <h1>Discover</h1>
+        <p class="muted">New tracks on SoundCloud that fit your style, found from your best tracks and favourite artists.</p>
       </div>
+      <div class="card how-to">
+        <div class="howstep"><span>1</span>Press <b>Find new tracks</b></div>
+        <div class="howstep"><span>2</span>Open one and ♥ like it on SoundCloud</div>
+        <div class="howstep"><span>3</span><b>My music → Sync</b>, then add it to your rekordbox collection</div>
+      </div>
+      <div class="row"><button id="discover-run" class="primary">Find new tracks</button><span id="discover-status" class="muted small"></span></div>
+      <div id="discover-list" class="disc-grid"></div>
     </section>
 
-    <!-- RATE -->
+    <!-- ============ RATE ============ -->
     <section id="tab-rate" class="tab hidden">
+      <div class="hero small-hero">
+        <h1>How did it sound?</h1>
+        <p class="muted">After mixing, give each transition a 👍 or 👎. Pairs you didn't like won't be put together again.</p>
+      </div>
       <div class="card">
-        <h2>How did it sound?</h2>
-        <p class="muted">After mixing the set, mark each transition. This is how the tool learns what works for your ears.</p>
-        <div id="rate-list"><p class="muted">Make a set first.</p></div>
-        <div class="row" id="rate-overall-row">
-          <label>Whole set
-            <select id="overall"><option value="0">–</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
-          </label>
-          <input id="overall-note" placeholder="Anything about the set as a whole?">
+        <div id="rate-list"><div class="empty">🎚️<p>Make a set first, mix it, then come back here.</p></div></div>
+        <div id="rate-overall" class="rate-overall hidden">
+          <div><span class="label">The whole set</span><div class="stars" id="stars"></div></div>
+          <input id="overall-note" class="grow" placeholder="Anything about the set as a whole?">
           <button id="rate-save" class="primary">Save ratings</button>
-          <span id="rate-status" class="muted"></span>
         </div>
       </div>
       <div class="card">
@@ -144,46 +190,101 @@
       </div>
     </section>
 
-    <!-- SETTINGS -->
+    <!-- ============ SETTINGS ============ -->
     <section id="tab-settings" class="tab hidden">
+      <div class="hero small-hero"><h1>Settings</h1><p class="muted">Tell djnext what you play.</p></div>
+      <div class="card">
+        <h2>Mixing level</h2>
+        <div class="choice" id="skill">
+          <button data-v="beginner"><span class="em">🌱</span><b>Beginner</b><span>Simple, short mixes with BEAT SYNC</span></button>
+          <button data-v="advanced"><span class="em">🎛️</span><b>Advanced</b><span>Long blends, EQ work, loop rolls</span></button>
+        </div>
+      </div>
       <div class="card">
         <h2>My style</h2>
-        <div class="row">
-          <label>Mixing level
-            <select id="skill"><option value="beginner">Beginner: simple, short mixes</option><option value="advanced">Advanced: long blends, rolls</option></select>
-          </label>
-        </div>
+        <span class="label">Quick start: pick what you play</span>
+        <div class="presets" id="presets"></div>
         <div class="row">
           <label>Lowest BPM <input id="bpm-min" type="number" step="1"></label>
           <label>Highest BPM <input id="bpm-max" type="number" step="1"></label>
         </div>
-        <label class="block">Favourite artists (one per line; they get a bonus)
-          <textarea id="favs" rows="6"></textarea></label>
-        <label class="block">Genres to leave out (one per line)
-          <textarea id="excl" rows="6"></textarea></label>
-        <button id="save-style" class="primary">Save</button>
-        <span id="style-status" class="muted"></span>
+        <span class="label">Favourite artists <span class="muted">(they get picked more often)</span></span>
+        <div class="tags" id="favs"></div>
+        <span class="label">Genres to leave out</span>
+        <div class="tags" id="excl"></div>
+        <div class="row"><button id="save-style" class="primary">Save</button></div>
       </div>
       <div class="card">
-        <h2>Undo last change</h2>
-        <p class="muted">Puts your rekordbox library back exactly as it was before djnext's last change (playlist, cues
-          or mood playlists). Every change is backed up first. rekordbox must be closed.</p>
-        <button id="undo">Undo last change</button>
-        <span id="undo-status" class="muted"></span>
+        <h2>Safety</h2>
+        <p class="muted small">Every change djnext makes to rekordbox is backed up first. Quit rekordbox before using these.</p>
+        <div class="row">
+          <button id="undo">↩︎ Undo last change</button>
+          <button id="remove-cues" class="ghost">Remove djnext hot cues</button>
+        </div>
       </div>
       <div class="card">
-        <h2>Hot cues</h2>
-        <p class="muted">Remove every hot cue this tool added (your own cues stay). rekordbox must be closed.</p>
-        <button id="remove-cues">Remove djnext cues</button>
-        <span id="cues-status" class="muted"></span>
-      </div>
-      <div class="card">
-        <h2>Tip: energy</h2>
-        <p class="muted">Star-rate tracks in rekordbox (1★ chill … 5★ peak-time) or put “Energy 7” in the comment. Without that, energy is guessed from BPM and the warm-up → peak → breather shape is only approximate.</p>
+        <h2>Tip: better energy</h2>
+        <p class="muted">Star-rate tracks in rekordbox (1★ chill … 5★ peak-time). Without ratings, djnext guesses energy from tempo and how much of each track is drops.</p>
+        <button id="rerun-setup" class="ghost">Run the setup again</button>
       </div>
     </section>
   </main>
 
+  <!-- ============ FIRST-RUN SETUP ============ -->
+  <div id="wizard" class="overlay hidden">
+    <div class="wiz">
+      <div class="wiz-dots"><span></span><span></span><span></span><span></span></div>
+
+      <div class="wiz-step" data-step="0">
+        <div class="wiz-em">💿</div>
+        <h1>Welcome to djnext</h1>
+        <p>djnext builds DJ sets from your own music in rekordbox. It puts the tracks in an order that flows, shows you <b>when</b> and <b>how</b> to mix each one, and can put the set straight into rekordbox with hot cues on your pads.</p>
+        <p id="wiz-lib" class="wiz-note">Looking for your rekordbox library…</p>
+        <div class="wiz-actions"><button class="primary big" data-next>Let's set it up (1 minute)</button></div>
+      </div>
+
+      <div class="wiz-step" data-step="1">
+        <div class="wiz-em">☁︎</div>
+        <h1>Your SoundCloud</h1>
+        <p>Paste your SoundCloud profile link. djnext reads your likes and playlists so it knows your music. Nothing is downloaded.</p>
+        <input id="wiz-sc" placeholder="https://soundcloud.com/your-name">
+        <p id="wiz-sc-status" class="wiz-note"></p>
+        <div class="wiz-actions">
+          <button class="ghost" data-skip>I don't use SoundCloud</button>
+          <button class="primary" id="wiz-sc-go">Connect</button>
+        </div>
+      </div>
+
+      <div class="wiz-step" data-step="2">
+        <div class="wiz-em">🎶</div>
+        <h1>What do you play?</h1>
+        <p>Pick one. You can fine-tune it later in Settings.</p>
+        <div class="presets big" id="wiz-presets"></div>
+        <span class="label">Favourite artists <span class="muted">(optional, press Enter after each)</span></span>
+        <div class="tags" id="wiz-favs"></div>
+        <div class="wiz-actions"><button class="ghost" data-back>Back</button><button class="primary" data-next>Next</button></div>
+      </div>
+
+      <div class="wiz-step" data-step="3">
+        <div class="wiz-em">🎛️</div>
+        <h1>How experienced are you?</h1>
+        <div class="choice" id="wiz-skill">
+          <button data-v="beginner" class="on"><span class="em">🌱</span><b>Beginner</b><span>Simple, short mixes with BEAT SYNC</span></button>
+          <button data-v="advanced"><span class="em">🎛️</span><b>Advanced</b><span>Long blends, EQ work, loop rolls</span></button>
+        </div>
+        <div class="wiz-actions"><button class="ghost" data-back>Back</button><button class="primary big" id="wiz-done">Start making sets</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="spinning" class="overlay hidden">
+    <div class="deck">
+      <div class="platter"><div class="vinyl"><div class="label-c"></div></div><div class="arm"></div></div>
+      <p id="spin-msg">Digging through your crates…</p>
+    </div>
+  </div>
+
+  <div id="toasts" class="toasts"></div>
   <script src="/static/app.js"></script>
 </body>
 </html>

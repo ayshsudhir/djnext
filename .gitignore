@@ -10,3 +10,5 @@ data/*
 *_notes.txt
 .DS_Store
 build/
+dist/
+!packaging/mac/icon.png

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "djnext"
-version = "0.1.0"
+version = "0.2.0"
 description = "Order a rekordbox playlist into a DJ set that follows an energy curve (DDJ-FLX4 friendly)."
 requires-python = ">=3.9"
 license = { text = "MIT" }
@@ -21,6 +21,7 @@ dependencies = [
 [project.optional-dependencies]
 plot = ["matplotlib>=3.7"]
 dev = ["pytest>=7", "httpx"]
+mac = ["pywebview>=5"]   # own window for the Mac app (packaging/mac/build_app.sh)
 
 [project.scripts]
 djnext = "djnext.cli:app"

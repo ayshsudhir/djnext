@@ -5,6 +5,13 @@ Orders your tracks into a DJ set that mixes harmonically (Camelot), stays within
 ## Easiest: the web page
 Double-click **`Start djnext.command`** (Mac) or **`Start djnext.bat`** (Windows), or run `djnext app`. It opens a page in your browser where you sync SoundCloud, make a set, send it to rekordbox and rate transitions. It runs only on your computer. To share it with friends, see [FRIENDS.md](FRIENDS.md).
 
+## Mac app
+`packaging/mac/build_app.sh` builds **djnext.app** (its own window, Python included) and a drag-to-Applications
+**.dmg** in `dist/`. It needs Python 3.10+ (`brew install python@3.12`). The app opens the small **Live** window
+(next to rekordbox, kept on top) and keeps its data in `~/Library/Application Support/djnext`, its log in
+`~/Library/Logs/djnext.log`. It's signed ad hoc (free), so friends click **Open Anyway** once in
+System Settings → Privacy & Security. Publish it with `gh release create v0.2.0 dist/djnext-0.2.0-arm64.dmg`.
+
 ## Setup (once)
 ```bash
 python3 -m venv .venv

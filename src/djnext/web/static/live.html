@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>djnext Live</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎚️</text></svg>">
+  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/static/live.css">
+</head>
+<body class="live">
+  <header class="lv-top">
+    <div class="lv-brand"><span class="rec" id="rec"></span>djnext <b>LIVE</b></div>
+    <span id="clock" class="lv-clock" title="Time since your set started">0:00</span>
+    <div class="lv-actions">
+      <button id="pin" class="icon hidden" title="Keep this window on top of rekordbox">📌</button>
+      <button id="open-review" class="icon" title="How's the set going?">📈</button>
+      <button id="open-main" class="icon" title="Open the set builder">🗂</button>
+    </div>
+  </header>
+
+  <main class="lv-main">
+    <!-- now playing -->
+    <section class="np card" id="np">
+      <div class="np-label">NOW PLAYING</div>
+      <div id="np-track" class="np-track hidden">
+        <div class="np-title" id="np-title"></div>
+        <div class="np-artist" id="np-artist"></div>
+        <div class="np-meta" id="np-meta"></div>
+      </div>
+      <div class="search">
+        <input id="q" placeholder="What's playing? Type a track or artist" autocomplete="off" spellcheck="false">
+        <div id="hits" class="hits hidden"></div>
+      </div>
+    </section>
+
+    <!-- crowd knob -->
+    <section class="crowd card">
+      <div class="np-label">HOW'S THE CROWD?</div>
+      <div class="knob-wrap">
+        <svg id="knob" class="knob" viewBox="0 0 200 200" tabindex="0" role="slider" aria-label="Crowd" aria-valuemin="1" aria-valuemax="5">
+          <defs>
+            <linearGradient id="arcg" x1="0" y1="1" x2="1" y2="1">
+              <stop offset="0" stop-color="#5b6cff"/><stop offset=".35" stop-color="#3ee0a0"/>
+              <stop offset=".65" stop-color="#ffc857"/><stop offset="1" stop-color="#ff3d5a"/>
+            </linearGradient>
+            <radialGradient id="capg" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#3a3846"/><stop offset="1" stop-color="#16151d"/></radialGradient>
+          </defs>
+          <path class="arc-bg" d=""/>
+          <path class="arc-on" d=""/>
+          <g id="ticks"></g>
+          <circle cx="100" cy="100" r="58" fill="url(#capg)" stroke="rgba(255,255,255,.12)" stroke-width="1.5"/>
+          <g id="pointer"><rect x="97" y="46" width="6" height="22" rx="3" fill="#fff"/></g>
+          <text id="knob-emoji" x="100" y="112" text-anchor="middle" font-size="34">🙂</text>
+        </svg>
+        <div class="crowd-name" id="crowd-name">Vibing</div>
+      </div>
+      <div class="crowd-steps" id="crowd-steps"></div>
+      <p class="tiny muted center">Drag the knob, scroll on it, or press keys 1–5</p>
+    </section>
+
+    <!-- what the room needs -->
+    <section class="need card" id="need">
+      <div class="need-head" id="need-head">Pick what's playing to get started</div>
+      <div class="need-tip muted" id="need-tip">Type the track that's on the deck right now. djnext suggests what to play next, based on the crowd.</div>
+    </section>
+
+    <!-- picks -->
+    <section>
+      <div class="np-label spaced">PLAY NEXT</div>
+      <div id="picks" class="picks"></div>
+    </section>
+  </main>
+
+  <!-- review -->
+  <div id="review" class="overlay hidden">
+    <div class="rv">
+      <div class="rv-head"><h2>How the set went</h2><button class="icon" id="rv-close">✕</button></div>
+      <div id="rv-body"></div>
+      <div class="rv-actions">
+        <select id="rv-sessions"></select>
+        <button id="end-set" class="primary">End set & start fresh</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toasts" class="toasts"></div>
+  <script src="/static/live.js"></script>
+</body>
+</html>

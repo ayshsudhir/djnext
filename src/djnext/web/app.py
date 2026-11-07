@@ -40,6 +40,11 @@ def _running() -> bool:
         return False
 
 
+def _mood_source():
+    """Moods pick from your SoundCloud tracks once SoundCloud is synced, otherwise from the whole collection."""
+    return "soundcloud" if sc.load() else None
+
+
 @app.get("/")
 def index():
     return FileResponse(str(STATIC / "index.html"))
@@ -69,7 +74,14 @@ def status():
         "curves": list(cfg.curves), "default_curve": cfg.default_curve,
         "style": cfg.style.__dict__, "skill": cfg.skill,
         "has_set": STATE["set"] is not None,
+        "onboarded": bool(service.read_settings().get("onboarded") or data),
     }
+
+
+@app.get("/api/rekordbox")
+def rekordbox_state():
+    """Cheap check the page polls, so it can say whether rekordbox is open."""
+    return {"running": _running()}
 
 
 class SyncIn(BaseModel):
@@ -108,7 +120,7 @@ def reload():
 @app.get("/api/moods")
 def moods():
     cfg = service.config()
-    pools, _ = service.mood_pools(_lib(), cfg)
+    pools, _ = service.mood_pools(_lib(), cfg, source=_mood_source())
     ms = cfg.moods()
     return {"moods": [{"key": k, "label": ms[k].label, "emoji": ms[k].emoji, "name": ms[k].name, "ask": ms[k].ask,
                        "count": len(items), "examples": [t.title for t, _ in items[:4]]}
@@ -120,7 +132,7 @@ def moods_push():
     from ..export.rekordbox_playlist import RekordboxRunning, write_to_rekordbox
 
     cfg = service.config()
-    pools, _ = service.mood_pools(_lib(), cfg)
+    pools, _ = service.mood_pools(_lib(), cfg, source=_mood_source())
     ms = cfg.moods()
     try:
         out = write_to_rekordbox(mood_playlists={ms[k].label: [t.id for t, _ in v] for k, v in pools.items()})
@@ -163,7 +175,7 @@ def make_set(body: SetIn):
     cfg = service.config()
     try:
         res = service.make_set(lib, cfg, lists=(body.lists or None) if not body.mood else None,
-                               source=body.source or ("soundcloud" if body.mood else None),
+                               source=_mood_source() if body.mood else body.source,
                                length_min=body.length, curve=None if body.mood else body.curve,
                                use_style=body.use_style, mood=body.mood)
     except (ValueError, KeyError) as e:
@@ -246,6 +258,7 @@ class StyleIn(BaseModel):
     bpm_max: float
     favourite_artists: List[str] = []
     exclude_genres: List[str] = []
+    onboarded: Optional[bool] = None
 
 
 @app.post("/api/settings")
@@ -256,7 +269,7 @@ def settings(body: StyleIn):
         "bpm_min": body.bpm_min, "bpm_max": body.bpm_max,
         "favourite_artists": [a.strip() for a in body.favourite_artists if a.strip()],
         "exclude_genres": [g.strip().lower() for g in body.exclude_genres if g.strip()],
-    }})
+    }, **({"onboarded": body.onboarded} if body.onboarded is not None else {})})
     return status()
 
 
@@ -293,10 +306,198 @@ def remove_cues():
     return {"removed": out["removed_cues"], "backup": str(out["backup"])}
 
 
+# ---------- live mode ----------
+
+LIVE_DIR = Path("data/live")
+
+
+@app.get("/live")
+def live_page():
+    return FileResponse(str(STATIC / "live.html"))
+
+
+def _live() -> dict:
+    """Tracks to pick from while playing (your style; SoundCloud tracks once synced) + crowd-pleaser scores."""
+    from ..core.energy import spread_guessed
+
+    lv = STATE.get("live")
+    if lv is None or lv.get("lib") is not _lib():
+        cfg = service.config()
+        lib = _lib()
+        pool, _ = service.pool_from(lib, None, _mood_source(), cfg.style)
+        service.with_structure(pool)
+        spread_guessed(pool)
+        pools, _ = service.mood_pools(lib, cfg, source=_mood_source())
+        pleasers = {t.id: score for t, score in pools.get("drunk", [])}
+        lv = STATE["live"] = {"lib": lib, "pool": pool, "pleasers": pleasers, "current": None, "played": [],
+                              "crowd": 3, "session": None}
+    return lv
+
+
+def _track_json(t) -> dict:
+    return {"id": t.id, "title": t.title, "artist": t.artist, "bpm": round(t.bpm, 1), "key": t.key or "?",
+            "energy": round(t.energy if t.energy is not None else 5.0, 1), "genre": t.genre}
+
+
+def _session(lv: dict):
+    from ..core.live import Session
+
+    if lv["session"] is None:
+        lv["session"] = Session()
+    return lv["session"]
+
+
+def _memory():
+    """What all your saved live sets taught (re-read each time, so the set you're playing counts too)."""
+    from ..core.live import Session, learn
+
+    sessions = []
+    for path in sorted(LIVE_DIR.glob("*.json")) if LIVE_DIR.exists() else []:
+        try:
+            sessions.append(Session.load(path))
+        except Exception:
+            continue  # a damaged file shouldn't stop the app
+    return learn(sessions)
+
+
+@app.get("/api/live/learned")
+def live_learned():
+    mem = _memory()
+    lib = _lib()
+    name = lambda i: lib.tracks[i].label if i in lib.tracks else i  # noqa: E731
+    ranked = sorted(((mem._shrunk(v), k) for k, v in mem.track.items()), reverse=True)
+    rescue = sorted(((mem._shrunk(v), k) for k, v in mem.rescue.items() if mem._shrunk(v) > 0), reverse=True)
+    return {"sets": mem.sets, "tracks": len(mem.track), "transitions": len(mem.pair),
+            "best": [name(k) for s, k in ranked if s > 0][:5],
+            "worst": [name(k) for s, k in reversed(ranked) if s < 0][:5],
+            "rescue": [name(k) for _, k in rescue][:5]}
+
+
+@app.get("/api/live/state")
+def live_state():
+    lv = _live()
+    return {"current": _track_json(lv["current"]) if lv["current"] else None, "crowd": lv["crowd"],
+            "played": len(lv["played"]), "session": lv["session"].started if lv["session"] else None,
+            "tracks": len(lv["pool"])}
+
+
+@app.get("/api/live/search")
+def live_search(q: str = ""):
+    words = q.lower().split()
+    if not words:
+        return {"tracks": []}
+    hits = [t for t in _live()["pool"] if all(w in t.label.lower() for w in words)]
+    return {"tracks": [_track_json(t) for t in hits[:8]]}
+
+
+class NowIn(BaseModel):
+    track_id: str
+
+
+@app.post("/api/live/now")
+def live_now(body: NowIn):
+    lv = _live()
+    t = next((x for x in lv["pool"] if x.id == body.track_id), None) or _lib().tracks.get(body.track_id)
+    if t is None:
+        raise HTTPException(404, "That track isn't in your library any more. Try Reload library.")
+    service.with_structure([t])
+    if lv["current"] is not None and lv["current"].id != t.id:
+        lv["played"].append(lv["current"])
+    lv["current"] = t
+    sess = _session(lv)
+    sess.log("track", t)
+    sess.save(LIVE_DIR)
+    return live_state()
+
+
+class CrowdIn(BaseModel):
+    level: int
+
+
+@app.post("/api/live/crowd")
+def live_crowd(body: CrowdIn):
+    lv = _live()
+    lv["crowd"] = max(1, min(5, body.level))
+    sess = _session(lv)
+    sess.log("crowd", crowd=lv["crowd"])
+    sess.save(LIVE_DIR)
+    return live_state()
+
+
+@app.get("/api/live/suggest")
+def live_suggest():
+    from ..core.live import CROWD, suggest
+    from ..core.mix_advice import advise
+
+    lv = _live()
+    c = CROWD[lv["crowd"]]
+    head = {"crowd": lv["crowd"], "emoji": c.emoji, "name": c.name, "need": c.need, "tip": c.tip}
+    if lv["current"] is None:
+        return {**head, "picks": []}
+    cfg = service.config()
+    memory = _memory()
+    picks = suggest(lv["current"], lv["pool"], lv["crowd"], cfg, lv["played"], lv["pleasers"], memory=memory)
+    service.with_structure([p.track for p in picks])
+    out = []
+    for p in picks:
+        adv = advise(lv["current"], p.track, cfg, lv["pool"])
+        out.append({**_track_json(p.track), "why": p.why, "delta": round(p.energy_delta, 1),
+                    "pleaser": lv["pleasers"].get(p.track.id, 0) >= 0.5,
+                    "learned": memory.note(lv["current"].id, p.track.id),
+                    "technique": adv.title, "technique_id": adv.technique, "steps": adv.steps,
+                    "timing": adv.timing})
+    return {**head, "picks": out}
+
+
+@app.get("/api/live/review")
+def live_review(session: Optional[str] = None):
+    from ..core.live import Session, review
+
+    if session:
+        path = LIVE_DIR / f"{session.replace(':', '-')}.json"
+        if not path.exists():
+            raise HTTPException(404, "No such session.")
+        sess = Session.load(path)
+    else:
+        sess = _live()["session"]
+        if sess is None:
+            past = sorted(LIVE_DIR.glob("*.json")) if LIVE_DIR.exists() else []
+            if not past:
+                raise HTTPException(400, "No live set yet. Pick what's playing and set the crowd knob to start one.")
+            sess = Session.load(past[-1])
+    return review(sess)
+
+
+@app.get("/api/live/sessions")
+def live_sessions():
+    past = sorted(LIVE_DIR.glob("*.json"), reverse=True) if LIVE_DIR.exists() else []
+    return {"sessions": [p.stem for p in past[:30]]}
+
+
+@app.post("/api/live/end")
+def live_end():
+    lv = _live()
+    sess = lv["session"]
+    lv.update(current=None, played=[], crowd=3, session=None)
+    if sess is None or not sess.events:
+        raise HTTPException(400, "Nothing to review yet.")
+    from ..core.live import review
+
+    return review(sess)
+
+
 def run(port: int = 8765, open_browser: bool = True) -> None:
     import uvicorn
 
+    import socket
+
     url = f"http://127.0.0.1:{port}"
+    with socket.socket() as probe:  # already running (double-clicked twice)? just open the page again
+        if probe.connect_ex(("127.0.0.1", port)) == 0:
+            print(f"djnext is already running at {url}, opening it in your browser.")
+            if open_browser:
+                webbrowser.open(url)
+            return
     if open_browser:
         threading.Timer(1.5, lambda: webbrowser.open(url)).start()
     print(f"djnext is running at {url}  (keep this window open; close it to stop)")
