@@ -121,7 +121,15 @@
       <div class="hero small-hero"><h1>My music</h1><p class="muted">Where djnext gets your tracks from.</p></div>
       <div class="card">
         <div class="card-head"><span class="sc-badge">☁︎</span><div><h2>SoundCloud</h2>
-          <p class="muted small">Reads your likes and playlists: track lists only, nothing is downloaded. Only public lists are visible.</p></div></div>
+          <p class="muted small">Your public likes and playlists (track lists only, nothing is downloaded).</p></div></div>
+        <details class="sc-help" id="sc-help"><summary class="small">How do I find my SoundCloud link?</summary>
+        <ol class="sc-steps">
+          <li><a class="btn-link" href="https://soundcloud.com/signin" target="_blank" rel="noopener">Open SoundCloud ↗</a> and sign in. It opens in your web browser.</li>
+          <li>Click your <b>profile picture</b> in the <b>top-right corner</b>, then click <b>Profile</b>.</li>
+          <li>Click the <b>address bar</b> at the top of the browser, press <b>⌘C</b> to copy the address, come back here and press <b>⌘V</b> to paste it below.</li>
+        </ol>
+        <p class="small muted">It looks like <code>https://soundcloud.com/your-name</code>. djnext reads your public likes and playlists (only the track lists, nothing is downloaded) and suggests <b>only those tracks that are also in your rekordbox Collection</b>. Skip this and djnext uses your whole rekordbox Collection instead.</p>
+        </details>
         <div class="row">
           <input id="sc-user" class="grow" placeholder="https://soundcloud.com/your-name">
           <button id="sc-sync" class="primary">Sync</button>
@@ -131,14 +139,23 @@
       </div>
 
       <div class="card" id="missing-card">
-        <h2>Tracks rekordbox hasn't analysed yet</h2>
-        <p class="muted">djnext needs each track's BPM and key from rekordbox. To fix these: in rekordbox, open them from the
-          <b>SoundCloud</b> section and add them to your collection (or load each on a deck once), then press <b>Reload library</b>.</p>
+        <h2>Make more tracks ready <span class="muted small" id="missing-count"></span></h2>
+        <p class="muted">djnext can only suggest a track after <b>rekordbox</b> has analysed it (tempo, key, structure).
+          Tracks in your SoundCloud lists that aren't in your rekordbox Collection yet can't be used. You can add a whole list in one go:</p>
+        <ol class="fix-steps">
+          <li>Open <b>rekordbox</b>. In the left sidebar, click <b>SoundCloud</b>, then the list (for example <b>Likes</b>).
+            <span class="muted">You need to be logged in to SoundCloud in rekordbox, with a SoundCloud Go+ or DJ plan.</span></li>
+          <li>Click any track in the list, then press <b>⌘A</b> to select them all.</li>
+          <li><b>Drag</b> the selected tracks onto <b>Collection</b> at the top of the left sidebar.</li>
+          <li>Wait until rekordbox has finished analysing them (the progress bar at the top disappears).</li>
+          <li>Come back here and press <b>Reload library</b>.</li>
+        </ol>
+        <p class="small muted">Lists you don't DJ with (for example a rock playlist)? Switch off <b>Use for DJing</b> above and they stop counting.</p>
         <div class="row">
-          <button id="reload">Reload library</button>
-          <button id="show-missing" class="ghost">Show the list</button>
+          <button id="reload" class="primary">Reload library</button>
+          <button id="show-missing" class="ghost">Show which tracks</button>
         </div>
-        <ol id="missing" class="small missing"></ol>
+        <div id="missing" class="small missing-groups"></div>
       </div>
 
       <div class="grid2">
@@ -246,8 +263,13 @@
       <div class="wiz-step" data-step="1">
         <div class="wiz-em">☁︎</div>
         <h1>Your SoundCloud</h1>
-        <p>Paste your SoundCloud profile link (on SoundCloud: your profile picture → Profile, then copy the address). djnext reads your public likes and playlists and then suggests <b>only those tracks that are also in your rekordbox Collection</b>. Nothing is downloaded.</p>
-        <p class="small muted">Skip this and djnext suggests from your whole rekordbox Collection instead.</p>
+        <p>Link your SoundCloud so djnext knows your taste:</p>
+        <ol class="sc-steps">
+          <li><a class="btn-link" href="https://soundcloud.com/signin" target="_blank" rel="noopener">Open SoundCloud ↗</a> and sign in. It opens in your web browser.</li>
+          <li>Click your <b>profile picture</b> in the <b>top-right corner</b>, then click <b>Profile</b>.</li>
+          <li>Click the <b>address bar</b> at the top of the browser, press <b>⌘C</b> to copy the address, come back here and press <b>⌘V</b> to paste it below.</li>
+        </ol>
+        <p class="small muted">It looks like <code>https://soundcloud.com/your-name</code>. djnext reads your public likes and playlists (only the track lists, nothing is downloaded) and suggests <b>only those tracks that are also in your rekordbox Collection</b>. Skip this and djnext uses your whole rekordbox Collection instead.</p>
         <input id="wiz-sc" placeholder="https://soundcloud.com/your-name">
         <p id="wiz-sc-status" class="wiz-note"></p>
         <div class="wiz-actions">

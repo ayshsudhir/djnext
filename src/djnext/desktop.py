@@ -47,6 +47,11 @@ def prepare_data_dir(support_dir: Path = SUPPORT_DIR) -> Path:
 def _log_to_file() -> None:
     """A Mac app has no Terminal window, so send output to ~/Library/Logs/djnext.log (Console.app can show it)."""
     LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        if LOG_FILE.exists() and LOG_FILE.stat().st_size > 2_000_000:  # keep one old log, start a fresh one
+            LOG_FILE.replace(LOG_FILE.with_suffix(".old.log"))
+    except OSError:
+        pass
     log = open(LOG_FILE, "a", buffering=1, encoding="utf-8")
     log.write(f"\n--- djnext started {time.strftime('%Y-%m-%d %H:%M:%S')} ---\n")
     sys.stdout = sys.stderr = log
@@ -113,14 +118,24 @@ class Windows:
     def open_live(self) -> None:
         self._make_live()
 
-    def _make_main(self):
+    MAIN_SIZE = (900, 760)  # set builder: room for the energy chart, still fits beside rekordbox
+    SETUP_SIZE = (540, 800)  # first-time setup: just the setup card
+
+    def _make_main(self, setup: bool = False):
         if self._alive(self._main):
             self._main.restore(); self._main.show()
             return self._main
+        first = self._main is None and self._live is None
+        width, height = self.SETUP_SIZE if setup else self.MAIN_SIZE
+        try:
+            screen = self._wv.screens[0]
+            width, height = min(width, screen.width - 40), min(height, screen.height - 80)
+        except Exception:
+            pass
         self._main = self._wv.create_window(
-            APP_NAME, html=SPLASH if self._main is None and self._live is None else None,
-            url=None if self._main is None and self._live is None else self._url,
-            width=1280, height=880, min_size=(420, 600), background_color="#0c0b12", text_select=True, js_api=self)
+            APP_NAME, html=SPLASH if first else None, url=None if first else self._url,
+            width=width, height=height, min_size=(400, 560), background_color="#0c0b12", text_select=True,
+            js_api=self)
         return self._main
 
     def _make_live(self):
@@ -174,7 +189,7 @@ def main() -> None:
     windows = Windows(webview, url)
     first_run = not _onboarded()
     # The app opens as the small Live window next to rekordbox; the very first start shows the setup instead.
-    first = windows._make_main() if first_run else windows._make_live()
+    first = windows._make_main(setup=True) if first_run else windows._make_live()
 
     def _load_when_ready():
         if not _wait_until_up(url):

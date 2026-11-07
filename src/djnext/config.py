@@ -87,9 +87,11 @@ SETTINGS_PATH = Path("data/settings.json")  # style changes made in the web app
 def _apply_settings_overrides(cfg: "Config") -> None:
     import json
 
-    if not SETTINGS_PATH.exists():
+    from .storage import read_json
+
+    settings = read_json(SETTINGS_PATH, {})
+    if not isinstance(settings, dict):
         return
-    settings = json.loads(SETTINGS_PATH.read_text(encoding="utf-8")) or {}
     if settings.get("skill") in ("beginner", "advanced"):
         cfg.skill = settings["skill"]
     st = settings.get("style") or {}

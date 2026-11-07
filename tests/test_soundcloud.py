@@ -20,3 +20,12 @@ def test_attach_links_by_soundcloud_id():
     res = sc.attach(lib, data)
     assert lib.playlists["sc:likes"] == ["a"] and lib.playlists["sc:Set"] == ["a"]
     assert [e["id"] for e in res.not_analysed] == ["222"]
+
+
+def test_switched_off_lists_dont_count_as_waiting():
+    lib = Library(tracks={"a": Track("a", "One", path="soundcloud:tracks:111", source="soundcloud", bpm=124)})
+    data = {"likes": [{"id": "111"}, {"id": "222"}], "playlists": {"Rock": [{"id": "333"}, {"id": "444"}]}}
+    assert len(sc.attach(lib, data).not_analysed) == 3
+    res = sc.attach(lib, data, skip=["Rock"])
+    assert [e["id"] for e in res.not_analysed] == ["222"] and res.not_analysed[0]["list"] == "likes"
+    assert lib.playlists["sc:Rock"] == []  # still listed, just not nagged about

@@ -240,11 +240,14 @@ def discover(lib: Library, cfg: Config, sc_data: dict, seeds_max: int = 15, rela
 
 
 def save(cands: Sequence[Candidate], path: Path = DISCOVER_PATH) -> Path:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"made_at": datetime.now().isoformat(timespec="seconds"),
-                                "tracks": [asdict(c) for c in cands]}, indent=2, ensure_ascii=False), encoding="utf-8")
-    return path
+    from ..storage import write_json
+
+    return write_json(path, {"made_at": datetime.now().isoformat(timespec="seconds"),
+                             "tracks": [asdict(c) for c in cands]})
 
 
 def load(path: Path = DISCOVER_PATH) -> Optional[dict]:
-    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
+    from ..storage import read_json
+
+    data = read_json(path)
+    return data if isinstance(data, dict) else None

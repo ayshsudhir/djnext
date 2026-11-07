@@ -25,16 +25,18 @@ MIN_TRACK_SECONDS = 120  # shorter = a clip/preview
 # ---------- settings made in the web app (data/settings.json, layered over config.yaml) ----------
 
 def read_settings() -> dict:
-    if SETTINGS_PATH.exists():
-        return json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
-    return {}
+    from .storage import read_json
+
+    data = read_json(SETTINGS_PATH, {})
+    return data if isinstance(data, dict) else {}
 
 
 def save_settings(updates: dict) -> dict:
+    from .storage import write_json
+
     data = read_settings()
     data.update(updates)
-    SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    SETTINGS_PATH.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    write_json(SETTINGS_PATH, data)
     return data
 
 

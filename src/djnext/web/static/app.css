@@ -39,7 +39,7 @@ header.top {
 .brand:hover .logo, body.busy .logo { animation-play-state: running; }
 @keyframes spin { to { transform: rotate(360deg); } }
 nav { display: flex; gap: 4px; margin: 0 auto; background: rgba(255, 255, 255, .04); border: 1px solid var(--line); padding: 4px; border-radius: 999px; }
-nav button { display: flex; align-items: center; gap: 7px; background: none; border: 0; color: var(--muted); padding: 8px 16px; border-radius: 999px; font: inherit; font-size: 14px; cursor: pointer; transition: .15s; }
+nav button { display: flex; align-items: center; gap: 7px; white-space: nowrap; background: none; border: 0; color: var(--muted); padding: 8px 16px; border-radius: 999px; font: inherit; font-size: 14px; cursor: pointer; transition: .15s; }
 nav button:hover { color: var(--text); }
 nav button.active { background: var(--grad); color: #fff; font-weight: 600; box-shadow: 0 4px 18px rgba(255, 70, 110, .35); }
 nav .ic { font-size: 15px; }
@@ -345,3 +345,46 @@ table.fb td { padding: 5px 16px 5px 0; }
 .label-c::after { content: ""; position: absolute; inset: 0; margin: auto; width: 8px; height: 8px; border-radius: 50%; background: #ddd; }
 .arm { position: absolute; right: -6px; top: 18px; width: 10px; height: 120px; border-radius: 5px; background: linear-gradient(#ccc, #888); transform-origin: top center; transform: rotate(24deg); box-shadow: 0 4px 10px rgba(0,0,0,.5); }
 .arm::after { content: ""; position: absolute; bottom: -8px; left: -5px; width: 20px; height: 18px; border-radius: 3px; background: #555; }
+
+/* SoundCloud help + list switches */
+.sc-steps, .fix-steps { margin: 10px 0; padding-left: 22px; }
+.sc-steps li, .fix-steps li { margin: 6px 0; }
+.fix-steps .muted { display: block; font-size: 12.5px; }
+a.btn-link { display: inline-block; padding: 4px 11px; border-radius: 9px; background: linear-gradient(135deg, #ff8800, #ff3300); color: #fff; text-decoration: none; font-weight: 600; font-size: 13.5px; }
+.sc-help { margin-top: 12px; }
+.sc-help summary { cursor: pointer; color: #ffb08f; }
+code { background: rgba(255, 255, 255, .08); padding: 1px 6px; border-radius: 6px; font-size: .92em; }
+.sc-table tr.off td { opacity: .45; }
+.sc-table tr.off td:nth-child(2) { opacity: 1; }
+.switch { position: relative; display: inline-block; width: 40px; height: 22px; cursor: pointer; }
+.switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.switch span { position: absolute; inset: 0; border-radius: 999px; background: rgba(255, 255, 255, .15); transition: .2s; }
+.switch span::before { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; border-radius: 50%; background: #fff; transition: .2s; }
+.switch input:checked + span { background: var(--grad); }
+.switch input:checked + span::before { transform: translateX(18px); }
+.missing-groups details { margin: 8px 0; }
+.missing-groups summary { cursor: pointer; }
+.missing-groups ol { columns: 2; column-gap: 28px; margin: 8px 0 0; padding-left: 22px; }
+.missing-groups a { color: #9fdcff; text-decoration: none; }
+@media (max-width: 860px) { .missing-groups ol { columns: 1; } }
+
+/* medium windows (the Mac app's set builder is 900 wide): compact top bar */
+@media (max-width: 1080px) {
+  header.top { gap: 10px; padding: 10px 14px; }
+  nav button { padding: 8px 11px; }
+  nav .lbl { display: none; }
+  nav button.active .lbl { display: inline; }
+  .pill .txt { display: none; }
+  .live-btn { padding: 7px 11px; }
+}
+/* short windows (the setup window): tighter setup card so the buttons stay visible */
+@media (max-height: 860px) {
+  .overlay { padding: 10px; }
+  .wiz { padding: 22px 24px 20px; border-radius: 20px; max-height: calc(100vh - 20px); }
+  .wiz-dots { margin-bottom: 12px; }
+  .wiz-em { font-size: 32px; }
+  .wiz h1 { font-size: 22px; margin: 2px 0 8px; }
+  .wiz p { margin: 8px 0; }
+  .sc-steps li { margin: 4px 0; }
+  .wiz-actions { margin-top: 14px; }
+}

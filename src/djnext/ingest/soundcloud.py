@@ -13,7 +13,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Sequence, Callable, Dict, List, Optional
 
 from .rekordbox_xml import Library
 
@@ -79,15 +79,16 @@ def fetch(user: str, log: Callable[[str], None] = print) -> dict:
 
 
 def save(data: dict, cache: Path = DEFAULT_CACHE) -> Path:
-    cache.parent.mkdir(parents=True, exist_ok=True)
-    cache.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-    return cache
+    from ..storage import write_json
+
+    return write_json(cache, data)
 
 
 def load(cache: Path = DEFAULT_CACHE) -> Optional[dict]:
-    if not cache.exists():
-        return None
-    return json.loads(cache.read_text(encoding="utf-8"))
+    from ..storage import read_json
+
+    data = read_json(cache)
+    return data if isinstance(data, dict) and data.get("user") else None
 
 
 @dataclass
@@ -96,8 +97,9 @@ class AttachResult:
     not_analysed: List[dict] = field(default_factory=list)  # in your SoundCloud lists but unknown to rekordbox
 
 
-def attach(lib: Library, data: dict) -> AttachResult:
-    """Add 'sc:likes' and 'sc:<playlist>' to lib.playlists, using tracks rekordbox has analysed."""
+def attach(lib: Library, data: dict, skip: Sequence[str] = ()) -> AttachResult:
+    """Add 'sc:likes' and 'sc:<playlist>' to lib.playlists, using tracks rekordbox has analysed.
+    Lists named in `skip` (switched off in My music) don't count towards not_analysed."""
     by_sc_id = {t.soundcloud_id: t.id for t in lib.tracks.values() if t.soundcloud_id}
     result = AttachResult()
     seen_missing = set()
@@ -109,9 +111,9 @@ def attach(lib: Library, data: dict) -> AttachResult:
             rid = by_sc_id.get(e["id"])
             if rid:
                 ids.append(rid)
-            elif e["id"] not in seen_missing:
+            elif e["id"] not in seen_missing and name not in skip:
                 seen_missing.add(e["id"])
-                result.not_analysed.append(e)
+                result.not_analysed.append({**e, "list": name})
         key = f"sc:{name}"
         lib.playlists[key] = ids
         result.playlists[key] = len(ids)

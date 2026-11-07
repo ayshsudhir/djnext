@@ -103,8 +103,9 @@ async function loadStatus() {
   $("#curve").innerHTML = STATUS.curves.map((c) => `<option ${c === STATUS.default_curve ? "selected" : ""}>${esc(c)}</option>`).join("");
   $("#style-hint").textContent = `(${STATUS.style.bpm_min}–${STATUS.style.bpm_max} BPM)`;
   if (STATUS.soundcloud && STATUS.not_analysed > 0) {
-    banner(`<span>💡 <b>${STATUS.not_analysed}</b> of your SoundCloud tracks aren't analysed in rekordbox yet, so they can't be used.</span>
-            <button onclick="showTab('music')">How to fix</button>`);
+    const ready = STATUS.soundcloud_lists.filter((l) => l.used).reduce((a, l) => a + l.ready, 0);
+    banner(`<span>💡 <b>${STATUS.not_analysed}</b> tracks from your SoundCloud lists aren't in your rekordbox Collection yet, so djnext can't suggest them (it can use ${ready} now). Adding a whole list takes one drag.</span>
+            <button onclick="showTab('music')">Show me how</button>`);
   } else banner("");
   return true;
 }
@@ -267,11 +268,19 @@ function renderMusic() {
   if (sc) $("#sc-user").value = `https://soundcloud.com/${sc.user}`;
   $("#sc-status").textContent = sc ? `Last synced ${when(sc.synced_at)}` : "Not connected yet.";
   $("#sc-lists").innerHTML = STATUS.soundcloud_lists.length ? `<table class="sc-table">
-      <tr><th>List</th><th>Ready to use</th><th></th></tr>
-      ${STATUS.soundcloud_lists.map((l) => `<tr><td>${esc(l.name)}</td>
+      <tr><th>List</th><th>Use for DJing</th><th>Ready to use</th><th></th></tr>
+      ${STATUS.soundcloud_lists.map((l) => `<tr class="${l.used ? "" : "off"}"><td>${esc(l.name)}</td>
+        <td><label class="switch" title="Off = djnext ignores this list when counting tracks to add"><input type="checkbox" data-list="${esc(l.name)}" ${l.used ? "checked" : ""}><span></span></label></td>
         <td><div class="progress"><i style="width:${l.total ? (100 * l.ready) / l.total : 0}%"></i></div></td>
         <td class="num">${l.ready} of ${l.total}</td></tr>`).join("")}
     </table>` : "";
+  $$("#sc-lists input[data-list]").forEach((cb) => cb.addEventListener("change", async () => {
+    const skip = $$("#sc-lists input[data-list]").filter((x) => !x.checked).map((x) => x.dataset.list);
+    try { STATUS = await api("/api/soundcloud/lists", { skip }); await loadStatus(); }
+    catch (e) { toast(esc(e.message), "err"); }
+  }));
+  $("#sc-help").open = !sc;
+  $("#missing-count").textContent = STATUS.not_analysed ? `(${STATUS.not_analysed} tracks waiting)` : "";
   $("#missing-card").classList.toggle("hidden", !sc || !STATUS.not_analysed);
   const bs = STATUS.library.by_source;
   $("#library").innerHTML = `<div class="stat"><b>${STATUS.library.total}</b><span>tracks in total</span></div>` +
@@ -300,7 +309,13 @@ $("#reload").addEventListener("click", (ev) => busy(ev.currentTarget, async () =
 
 $("#show-missing").addEventListener("click", (ev) => busy(ev.currentTarget, async () => {
   const r = await api("/api/soundcloud/missing");
-  $("#missing").innerHTML = r.tracks.map((t) => `<li>${t.url ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.label)}</a>` : esc(t.label)}</li>`).join("") || "<li>None, everything is analysed.</li>";
+  if (!r.tracks.length) { $("#missing").innerHTML = "<p>None: everything in the lists you use is ready.</p>"; return; }
+  const groups = {};
+  r.tracks.forEach((t) => (groups[t.list || "other"] ||= []).push(t));
+  $("#missing").innerHTML = Object.entries(groups).map(([name, ts]) => `
+    <details><summary><b>${esc(name)}</b> <span class="muted">${ts.length} track${ts.length === 1 ? "" : "s"} to add</span></summary>
+      <ol>${ts.map((t) => `<li>${t.url ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.label)}</a>` : esc(t.label)}</li>`).join("")}</ol>
+    </details>`).join("");
 }));
 
 $("#moods-push").addEventListener("click", (ev) => {

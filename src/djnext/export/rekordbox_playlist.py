@@ -41,7 +41,18 @@ def backup(db_dir: Optional[Path] = None, backup_dir: Path = DEFAULT_BACKUP_DIR)
     for name in _FILES:
         if (db_dir / name).exists():
             shutil.copy2(db_dir / name, dest / name)
+    prune_backups(backup_dir)
     return dest
+
+
+KEEP_BACKUPS = 15  # ~10 MB each; older ones are deleted so backups don't fill the disk
+
+
+def prune_backups(backup_dir: Path = DEFAULT_BACKUP_DIR, keep: int = KEEP_BACKUPS) -> int:
+    old = list_backups(backup_dir)[keep:]
+    for d in old:
+        shutil.rmtree(d, ignore_errors=True)
+    return len(old)
 
 
 def list_backups(backup_dir: Path = DEFAULT_BACKUP_DIR) -> List[Path]:

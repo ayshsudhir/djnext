@@ -15,7 +15,11 @@ echo "==> djnext $VERSION for $ARCH, using $("$PY" --version)"
 # 1. A clean build environment, separate from your normal .venv
 if [ ! -x "$BUILD/venv/bin/python" ]; then "$PY" -m venv "$BUILD/venv"; fi
 "$BUILD/venv/bin/pip" install -q --upgrade pip
-"$BUILD/venv/bin/pip" install -q ".[mac]" pyinstaller
+"$BUILD/venv/bin/pip" install -q ".[mac,dev]" pyinstaller
+
+# 1b. Run the tests with exactly the libraries that go into the app, so a library update can't break it unnoticed
+echo "==> Testing with the app's libraries"
+"$BUILD/venv/bin/python" -m pytest -q -p no:cacheprovider || { echo "Tests failed: not building."; exit 1; }
 
 # 2. App icon: icon.png (1024x1024) -> djnext.icns
 ICONSET="$BUILD/djnext.iconset"

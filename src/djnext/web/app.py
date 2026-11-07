@@ -22,6 +22,22 @@ app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
 STATE: dict = {"lib": None, "attach": None, "set": None}
 
 
+@app.exception_handler(Exception)
+async def _unexpected(request, exc):  # a bug, not a user mistake: say what happened and where the details are
+    import logging
+    import traceback
+
+    from fastapi.responses import JSONResponse
+
+    traceback.print_exc()
+    logging.getLogger("djnext").error("Error in %s: %r", request.url.path, exc)
+    writing = request.url.path in ("/api/push", "/api/moods/push", "/api/cues/remove", "/api/undo")
+    msg = (f"djnext hit an error: {type(exc).__name__}: {exc}. "
+           + ("Your rekordbox library was not changed. " if writing else "")
+           + "Please send ~/Library/Logs/djnext.log (Mac app) or a screenshot of the black window to whoever shared djnext.")
+    return JSONResponse({"detail": msg}, status_code=500)
+
+
 def _lib(reload: bool = False):
     if STATE["lib"] is None or reload:
         try:
@@ -58,11 +74,13 @@ def status():
     cfg = service.config()
     data = sc.load()
     lists = []
+    skip = _skipped_lists()
+    res = None
     if data:
-        res = sc.attach(lib, data)
+        res = sc.attach(lib, data, skip)
         names = {"likes": data.get("likes", []), **data.get("playlists", {})}
-        lists = [{"key": f"sc:{n}", "name": n, "total": len(e), "ready": res.playlists.get(f"sc:{n}", 0)}
-                 for n, e in names.items()]
+        lists = [{"key": f"sc:{n}", "name": n, "total": len(e), "ready": res.playlists.get(f"sc:{n}", 0),
+                  "used": n not in skip} for n, e in names.items()]
     rb_lists = [{"key": k, "name": k, "total": len(v), "ready": len(v)}
                 for k, v in lib.playlists.items() if not k.startswith("sc:") and v]
     return {
@@ -70,7 +88,7 @@ def status():
         "rekordbox_running": _running(),
         "soundcloud": {"user": data["user"], "synced_at": data["synced_at"]} if data else None,
         "soundcloud_lists": lists, "rekordbox_lists": rb_lists,
-        "not_analysed": len(sc.attach(lib, data).not_analysed) if data else 0,
+        "not_analysed": len(res.not_analysed) if res else 0,
         "curves": list(cfg.curves), "default_curve": cfg.default_curve,
         "style": cfg.style.__dict__, "skill": cfg.skill,
         "has_set": STATE["set"] is not None,
@@ -90,9 +108,12 @@ class SyncIn(BaseModel):
 
 @app.post("/api/soundcloud/sync")
 def soundcloud_sync(body: SyncIn):
-    user = body.user.strip().rstrip("/").split("soundcloud.com/")[-1].split("/")[0]
-    if not user:
-        raise HTTPException(400, "Enter your SoundCloud username or profile link.")
+    user = body.user.strip().rstrip("/").split("soundcloud.com/")[-1].split("/")[0].split("?")[0]
+    if not user or " " in user:
+        raise HTTPException(400, "Paste your SoundCloud profile link, for example https://soundcloud.com/your-name.")
+    if user in ("you", "discover", "feed", "search", "upload", "stream", "settings", "people"):
+        raise HTTPException(400, "That's a SoundCloud page, not your profile. On SoundCloud, click your profile "
+                                 "picture (top right) → Profile, then copy the address from the address bar.")
     try:
         data = sc.fetch(user, log=lambda *_: None)
     except Exception as e:
@@ -102,13 +123,29 @@ def soundcloud_sync(body: SyncIn):
     return status()
 
 
+def _skipped_lists() -> List[str]:
+    """SoundCloud lists switched off in My music ("Use for DJing")."""
+    return list(service.read_settings().get("sc_skip_lists") or [])
+
+
+class ListsIn(BaseModel):
+    skip: List[str] = []
+
+
+@app.post("/api/soundcloud/lists")
+def soundcloud_lists(body: ListsIn):
+    service.save_settings({"sc_skip_lists": sorted(set(body.skip))})
+    return status()
+
+
 @app.get("/api/soundcloud/missing")
 def soundcloud_missing():
     data = sc.load()
     if not data:
         return {"tracks": []}
-    res = sc.attach(_lib(), data)
-    return {"tracks": [{"label": sc.label(e), "url": e.get("url", "")} for e in res.not_analysed]}
+    res = sc.attach(_lib(), data, _skipped_lists())
+    return {"tracks": [{"label": sc.label(e), "url": e.get("url", ""), "list": e.get("list", "")}
+                       for e in res.not_analysed]}
 
 
 @app.post("/api/reload")
@@ -316,22 +353,59 @@ def live_page():
     return FileResponse(str(STATIC / "live.html"))
 
 
+RESUME_HOURS = 3  # reopening djnext within this time after the last knob turn or track carries on that set
+LIVE_LOCK = threading.RLock()  # one live update at a time (fast knob turns arrive in parallel)
+
+
+def _resume(lib, pool) -> dict:
+    """Pick up the last live set if it was going recently (djnext was closed, crashed or the Mac restarted mid-set)."""
+    from datetime import datetime, timedelta
+
+    from ..core.live import Session
+
+    fresh = {"current": None, "played": [], "crowd": 3, "session": None}
+    past = sorted(LIVE_DIR.glob("*.json")) if LIVE_DIR.exists() else []
+    if not past:
+        return fresh
+    try:
+        sess = Session.load(past[-1])
+    except Exception:
+        return fresh
+    if not sess.events or sess.events[-1].kind == "end":
+        return fresh  # that set was ended on purpose
+    if datetime.now() - datetime.fromisoformat(sess.events[-1].at) > timedelta(hours=RESUME_HOURS):
+        return fresh
+    by_id = {t.id: t for t in pool}
+    tracks = [by_id.get(e.track_id) or lib.tracks.get(e.track_id) for e in sess.events if e.kind == "track"]
+    tracks = [t for t in tracks if t is not None]
+    crowd = next((e.crowd for e in reversed(sess.events) if e.kind == "crowd"), 3)
+    return {"current": tracks[-1] if tracks else None, "played": tracks[:-1], "crowd": crowd, "session": sess}
+
+
 def _live() -> dict:
     """Tracks to pick from while playing (your style; SoundCloud tracks once synced) + crowd-pleaser scores."""
     from ..core.energy import spread_guessed
 
-    lv = STATE.get("live")
-    if lv is None or lv.get("lib") is not _lib():
-        cfg = service.config()
-        lib = _lib()
-        pool, _ = service.pool_from(lib, None, _mood_source(), cfg.style)
-        service.with_structure(pool)
-        spread_guessed(pool)
-        pools, _ = service.mood_pools(lib, cfg, source=_mood_source())
-        pleasers = {t.id: score for t, score in pools.get("drunk", [])}
-        lv = STATE["live"] = {"lib": lib, "pool": pool, "pleasers": pleasers, "current": None, "played": [],
-                              "crowd": 3, "session": None}
-    return lv
+    with LIVE_LOCK:
+        lv = STATE.get("live")
+        if lv is None or lv.get("lib") is not _lib():
+            cfg = service.config()
+            lib = _lib()
+            pool, _ = service.pool_from(lib, None, _mood_source(), cfg.style)
+            service.with_structure(pool)
+            spread_guessed(pool)
+            pools, _ = service.mood_pools(lib, cfg, source=_mood_source())
+            pleasers = {t.id: score for t, score in pools.get("drunk", [])}
+            if lv is None:  # first time since djnext started: carry on a recent set
+                keep = _resume(lib, pool)
+            else:  # library reloaded mid-set (Reload library, Undo, Sync): keep your place
+                by_id = {t.id: t for t in pool}
+                find = lambda t: by_id.get(t.id) or lib.tracks.get(t.id)  # noqa: E731
+                keep = {"current": find(lv["current"]) if lv["current"] else None,
+                        "played": [x for x in (find(t) for t in lv["played"]) if x is not None],
+                        "crowd": lv["crowd"], "session": lv["session"]}
+            lv = STATE["live"] = {"lib": lib, "pool": pool, "pleasers": pleasers, **keep}
+        return lv
 
 
 def _track_json(t) -> dict:
@@ -401,12 +475,13 @@ def live_now(body: NowIn):
     if t is None:
         raise HTTPException(404, "That track isn't in your library any more. Try Reload library.")
     service.with_structure([t])
-    if lv["current"] is not None and lv["current"].id != t.id:
-        lv["played"].append(lv["current"])
-    lv["current"] = t
-    sess = _session(lv)
-    sess.log("track", t)
-    sess.save(LIVE_DIR)
+    with LIVE_LOCK:
+        if lv["current"] is not None and lv["current"].id != t.id:
+            lv["played"].append(lv["current"])
+        lv["current"] = t
+        sess = _session(lv)
+        sess.log("track", t)
+        sess.save(LIVE_DIR)
     return live_state()
 
 
@@ -417,10 +492,11 @@ class CrowdIn(BaseModel):
 @app.post("/api/live/crowd")
 def live_crowd(body: CrowdIn):
     lv = _live()
-    lv["crowd"] = max(1, min(5, body.level))
-    sess = _session(lv)
-    sess.log("crowd", crowd=lv["crowd"])
-    sess.save(LIVE_DIR)
+    with LIVE_LOCK:
+        lv["crowd"] = max(1, min(5, body.level))
+        sess = _session(lv)
+        sess.log("crowd", crowd=lv["crowd"])
+        sess.save(LIVE_DIR)
     return live_state()
 
 
@@ -457,14 +533,22 @@ def live_review(session: Optional[str] = None):
         path = LIVE_DIR / f"{session.replace(':', '-')}.json"
         if not path.exists():
             raise HTTPException(404, "No such session.")
-        sess = Session.load(path)
+        try:
+            sess = Session.load(path)
+        except ValueError:
+            raise HTTPException(404, "That set's file is damaged, so it can't be shown.")
     else:
         sess = _live()["session"]
         if sess is None:
-            past = sorted(LIVE_DIR.glob("*.json")) if LIVE_DIR.exists() else []
+            past = []
+            for path in sorted(LIVE_DIR.glob("*.json")) if LIVE_DIR.exists() else []:
+                try:
+                    past.append(Session.load(path))
+                except ValueError:
+                    continue
             if not past:
                 raise HTTPException(400, "No live set yet. Pick what's playing and set the crowd knob to start one.")
-            sess = Session.load(past[-1])
+            sess = past[-1]
     return review(sess)
 
 
@@ -477,8 +561,12 @@ def live_sessions():
 @app.post("/api/live/end")
 def live_end():
     lv = _live()
-    sess = lv["session"]
-    lv.update(current=None, played=[], crowd=3, session=None)
+    with LIVE_LOCK:
+        sess = lv["session"]
+        lv.update(current=None, played=[], crowd=3, session=None)
+        if sess is not None and sess.events:
+            sess.log("end")
+            sess.save(LIVE_DIR)
     if sess is None or not sess.events:
         raise HTTPException(400, "Nothing to review yet.")
     from ..core.live import review

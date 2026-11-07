@@ -8,7 +8,6 @@ which tracks lifted the room and where it dipped.
 from __future__ import annotations
 
 import copy
-import json
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -97,7 +96,7 @@ def suggest(current: Track, pool: Sequence[Track], crowd: int, cfg: Config, play
 @dataclass
 class Event:
     at: str  # ISO time
-    kind: str  # "track" or "crowd"
+    kind: str  # "track", "crowd", or "end" (you pressed End set)
     track_id: str = ""
     label: str = ""
     crowd: int = 0
@@ -113,16 +112,20 @@ class Session:
                                  track.id if track else "", track.label if track else "", crowd))
 
     def save(self, folder: Path) -> Path:
-        folder.mkdir(parents=True, exist_ok=True)
-        path = folder / f"{self.started.replace(':', '-')}.json"
-        path.write_text(json.dumps({"started": self.started, "events": [asdict(e) for e in self.events]},
-                                   indent=1, ensure_ascii=False), encoding="utf-8")
-        return path
+        from ..storage import write_json
+
+        return write_json(folder / f"{self.started.replace(':', '-')}.json",
+                          {"started": self.started, "events": [asdict(e) for e in self.events]}, indent=1)
 
     @classmethod
     def load(cls, path: Path) -> "Session":
-        d = json.loads(path.read_text(encoding="utf-8"))
-        return cls(d["started"], [Event(**e) for e in d["events"]])
+        """Raises ValueError for a damaged file (callers skip it)."""
+        from ..storage import read_json
+
+        d = read_json(path)
+        if not isinstance(d, dict) or "started" not in d:
+            raise ValueError(f"{path.name} isn't a djnext set")
+        return cls(d["started"], [Event(**e) for e in d.get("events", [])])
 
 
 def review(session: Session, now: Optional[datetime] = None) -> dict:

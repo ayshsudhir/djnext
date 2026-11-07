@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "djnext"
-version = "0.2.0"
+version = "0.2.1"
 description = "Order a rekordbox playlist into a DJ set that follows an energy curve (DDJ-FLX4 friendly)."
 requires-python = ">=3.9"
 license = { text = "MIT" }
@@ -12,7 +12,7 @@ dependencies = [
     "typer>=0.9",
     "rich>=13",
     "pyyaml>=6",
-    "pyrekordbox>=0.4",   # read rekordbox's own library (a temporary copy of it)
+    "pyrekordbox>=0.4.4,<0.5",   # rekordbox's library; 0.5 renamed modules djnext uses, so stay on the tested 0.4.x
     "yt-dlp",             # read your SoundCloud likes/playlists (track lists only)
     "fastapi>=0.100",     # local web page
     "uvicorn>=0.23",

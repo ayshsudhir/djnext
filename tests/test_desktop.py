@@ -25,6 +25,13 @@ def test_live_window_sits_on_top_at_the_right_edge():
     assert wv.windows[1].url == "http://127.0.0.1:5000" and wv.windows[1].html is None
     win.open_live()  # already open: no duplicate
     assert len(wv.windows) == 2
+    assert wv.windows[1].width == 900  # set builder isn't full screen
+
+
+def test_first_run_setup_window_is_small():
+    wv = FakeWebview()
+    w = desktop.Windows(wv, "http://127.0.0.1:5000")._make_main(setup=True)
+    assert (w.width, w.height) == (540, 800) and w.html
 
 
 def test_data_folder_is_prepared(tmp_path, monkeypatch):

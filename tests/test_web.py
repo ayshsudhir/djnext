@@ -100,3 +100,17 @@ def test_first_run_setup_and_rekordbox_poll(client):
     assert s["onboarded"] is True and s["style"]["bpm_min"] == 165
     s = client.post("/api/settings", json={"bpm_min": 120, "bpm_max": 130}).json()  # later saves keep the flag
     assert s["onboarded"] is True
+
+
+def test_unexpected_errors_explain_themselves(client, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    def boom(*a, **k):
+        raise ModuleNotFoundError("No module named 'x'")
+
+    monkeypatch.setattr(webapp, "_running", lambda: False)
+    client.post("/api/set", json={"length": 30, "source": None})
+    import djnext.export.rekordbox_playlist as rp
+    monkeypatch.setattr(rp, "write_to_rekordbox", boom)
+    r = TestClient(webapp.app, raise_server_exceptions=False).post("/api/push", json={})
+    assert r.status_code == 500 and "was not changed" in r.json()["detail"] and "No module" in r.json()["detail"]
