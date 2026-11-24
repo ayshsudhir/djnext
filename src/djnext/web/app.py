@@ -51,14 +51,16 @@ def _load(reload: bool = False):
                 raise HTTPException(404, f"Couldn't find your rekordbox library ({e}). Is rekordbox installed?")
             STATE["pool"] = None
         if STATE["pool"] is None:
-            STATE["pool"], STATE["counts"] = service.the_pool(STATE["lib"])
-            STATE["ev"] = service.evidence(STATE["lib"], STATE["pool"])
-            STATE["verdicts"] = service.sort_by_genre(STATE["pool"])
-    return STATE["lib"], STATE["pool"], STATE["ev"]
+            pool, counts = service.the_pool(STATE["lib"])  # build everything first, then swap in at once
+            ev = service.evidence(STATE["lib"], pool)
+            verdicts = service.sort_by_genre(pool)
+            STATE.update(pool=pool, counts=counts, ev=ev, verdicts=verdicts)
+        return STATE["lib"], STATE["pool"], STATE["ev"]
 
 
 def _refresh_evidence() -> None:
-    STATE["pool"] = None
+    with _lock:  # a background refresh must never pull the tracks away from under a request
+        STATE["pool"] = None
     _load()
 
 

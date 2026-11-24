@@ -169,6 +169,7 @@
     <input type="text" id="plName" aria-label="Playlist name">
     <button class="btn" id="sendBtn">Send to rekordbox with hot cues</button>
   </div>
+  <div class="in" style="padding:0 16px"><span id="rbLight" style="font-size:13.5px;font-weight:600"></span></div>
   <div class="in" style="padding-top:0"><span class="sub" id="sendNote"></span></div>
 </div>
 
@@ -264,10 +265,11 @@ function renderPlaylist(p) {
 }
 
 function sendNote() {
-  $("sendNote").textContent = rbOpen
-    ? "Quit rekordbox first (Cmd+Q). djnext backs up your library, then adds this playlist to a “djnext” folder."
-    : "Adds this playlist to a “djnext” folder in rekordbox, with hot cues E (cue in), F (swap the bass) and G (start the next track). A backup is made first.";
-  $("sendBtn").disabled = rbOpen;
+  $("rbLight").innerHTML = rbOpen
+    ? `<span style="color:var(--warn)">● rekordbox is open: quit it to send</span> <span class="sub" style="font-weight:400">(in rekordbox press ⌘Q; this changes by itself)</span>`
+    : `<span style="color:var(--good)">● rekordbox is closed: ready to send</span>`;
+  if (!$("sendNote").dataset.result) $("sendNote").textContent = "Adds this playlist to a “djnext” folder in rekordbox, with hot cues E (cue in), F (swap the bass) and G (start the next track). A backup is made first.";
+  $("sendBtn").disabled = false;
 }
 
 async function refresh() { try { renderStatus(await api("/api/status")); } catch (e) { $("sub").textContent = e.message; } }
@@ -337,7 +339,7 @@ document.addEventListener("change", async (e) => {
 });
 
 $("genresBtn").onclick = async () => {
-  if (rbOpen) { msg("genresMsg", "Quit rekordbox first (Cmd+Q), then press the button again.", "warn"); return; }
+  if (rbOpen) { msg("genresMsg", "rekordbox is open: quit it (⌘Q), then press the button again.", "err"); return; }
   $("genresBtn").disabled = true; msg("genresMsg", "Writing to rekordbox…");
   try {
     const d = await api("/api/send_genres", {});
@@ -352,16 +354,21 @@ async function showRemoved() {
 }
 
 $("sendBtn").onclick = async () => {
-  $("sendBtn").disabled = true; $("sendNote").textContent = "Writing to rekordbox…";
+  if (rbOpen) {
+    $("sendNote").dataset.result = "1";
+    $("sendNote").innerHTML = `<span style="color:var(--bad)">rekordbox is open, so djnext can't add the playlist yet (rekordbox would overwrite it). Quit rekordbox (⌘Q), wait for the green light, then press Send again.</span>`;
+    return;
+  }
+  $("sendBtn").disabled = true; $("sendNote").dataset.result = "1"; $("sendNote").textContent = "Writing to rekordbox…";
   try {
     const d = await api("/api/send", {name: $("plName").value});
-    $("sendNote").innerHTML = `<span style="color:var(--good)">Done: “${esc(d.name)}” is in the ${esc(d.folder)} folder with ${d.tracks} tracks and ${d.cues} hot cues${d.cues_skipped ? ` (${d.cues_skipped} skipped: those pads were already used)` : ""}. Open rekordbox to play it.</span> <button class="link" id="undoBtn">Undo</button>`;
+    $("sendNote").innerHTML = `<span style="color:var(--good)">Done: “${esc(d.name)}” is in the ${esc(d.folder)} folder with ${d.tracks} tracks and ${d.cues} hot cues${d.cues_skipped ? ` (${d.cues_skipped} skipped: those pads were already used)` : ""}. Now open rekordbox → <b>Playlists</b> → <b>djnext</b> (rekordbox's own Playlists, not the SoundCloud section).</span> <button class="link" id="undoBtn">Undo</button>`;
     $("undoBtn").onclick = async () => {
       if (!confirm("Put rekordbox back exactly as it was before this Send? Anything else you changed in rekordbox since then is lost too.")) return;
       try { await api("/api/undo", {}); $("sendNote").textContent = "Undone: rekordbox is back as it was."; } catch (e) { $("sendNote").textContent = e.message; }
     };
   } catch (e) { $("sendNote").innerHTML = `<span style="color:var(--bad)">${esc(e.message)}</span>`; }
-  $("sendBtn").disabled = rbOpen;
+  $("sendBtn").disabled = false;
 };
 
 async function checkUpdate(manual) {

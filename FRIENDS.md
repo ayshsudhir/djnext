@@ -40,7 +40,7 @@ Under every track in a playlist, **Fits after this, not in your likes ▾** list
 - djnext doesn't know their tempo or key until they're in rekordbox, so check that by ear.
 
 ## Send to rekordbox
-1. **Quit rekordbox** (⌘Q). The button only works while rekordbox is closed.
+1. **Quit rekordbox** (⌘Q). The light next to the button turns green (**rekordbox is closed: ready to send**) within a few seconds. While rekordbox is open the light is yellow and Send tells you to quit it first, because rekordbox would overwrite the new playlist.
 2. Give the playlist a name if you like, and press **Send to rekordbox with hot cues**.
 3. Open rekordbox. The playlist is under **Playlists → djnext** (rekordbox's own Playlists, not the SoundCloud section).
 
