@@ -257,6 +257,7 @@ function renderPlaylist(p) {
         <div class="tags"><span class="tag">${s.bpm} BPM</span><span class="tag">${esc(s.key)}</span>${s.hot ? `<span class="tag known" title="${esc(s.hot_why)}">🔥 hot right now</span>` : s.known ? `<span class="tag known">crowd knows it</span>` : ""}${s.intro_bars != null ? `<span class="tag">${s.intro_bars}-bar intro</span>` : ""}</div>
         <div class="why ${i === 0 ? "first" : ""}">${i === 0 ? "Opener" : esc(s.why).replace(/^⚠ hard mix:/, '<span class="warn">⚠ hard mix:</span>')}</div>
         <div class="cues">${cueText(s.cues)}</div>
+        <button class="link" data-outside="${i}" style="margin-top:6px">${i + 1 < p.steps.length ? "Fits after this, not in your likes ▾" : "What DJs play after this, not in your likes ▾"}</button>
       </div>
       <div class="acts">${i > 0 ? `<button class="ghost" data-swap="${i}">Other options</button><button class="link" data-redo="${i}">Doesn't work after #${i}</button>` : ""}<button class="link" data-rm="${s.id}">Don't use</button></div>
     </li>`).join("");
@@ -305,6 +306,15 @@ document.addEventListener("click", async (e) => {
       const box = document.createElement("div"); box.className = "opts";
       box.innerHTML = d.options.length ? d.options.map(o => `<div class="opt"><div><div><span class="title">${esc(o.title)}</span> <span class="artist">· ${esc(o.artist)}</span></div><div class="why">${esc(o.why)}</div></div><button class="ghost" data-use="${o.id}" data-at="${t.dataset.swap}">Use this</button></div>`).join("")
         : `<div class="sub">Nothing else mixes well here.</div>`;
+      li.appendChild(box);
+    } else if (t.dataset.outside) {
+      const li = t.closest("li"); const open = li.querySelector(".outside");
+      if (open) { open.remove(); return; }
+      const d = await api("/api/playlist/outside", {position: +t.dataset.outside});
+      const box = document.createElement("div"); box.className = "opts outside";
+      box.innerHTML = `<div class="sub" style="padding:4px 0 6px">From pro DJ sets around the world. Not in your playlist: if you like one, play it from SoundCloud, or ♥ it there so djnext can use it.</div>` +
+        (d.tracks.length ? d.tracks.map(o => `<div class="opt"><div><div><span class="title">${esc(o.title)}</span> <span class="artist">· ${esc(o.artist)}</span></div><div class="why">${esc(o.why)}</div><div class="sub" style="font-size:12px">e.g. ${esc(o.example)}</div></div><a class="ghost" href="${esc(o.soundcloud)}" target="_blank" style="text-decoration:none;white-space:nowrap">Find on SoundCloud</a></div>`).join("")
+          : `<div class="sub">${d.checked ? "No DJ set we know of played something else after this one." : "This track hasn't been looked up in DJ sets yet (it happens in the background)."}</div>`);
       li.appendChild(box);
     } else if (t.dataset.use) {
       renderPlaylist(await api("/api/playlist/replace", {position: +t.dataset.at, track_id: t.dataset.use}));

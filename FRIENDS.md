@@ -4,7 +4,7 @@ Not installed yet? Start on the **[djnext start page](https://github.com/ayshsud
 
 djnext sorts **your SoundCloud likes** into genre lists, then picks a playlist from the list you choose where every track flows into the next, and puts it in rekordbox with the hot cues already set. It never picks a track you haven't liked.
 
-**Jump to:** [First time](#first-time) · [Genre lists](#genre-lists) · [Make a playlist](#make-a-playlist) · [Change a pick](#change-a-pick) · [Send to rekordbox](#send-to-rekordbox) · [How it picks](#how-it-picks) · [Something went wrong](#if-something-goes-wrong) · [Updating](#updating-and-removing) · [Disclaimer](#disclaimer)
+**Jump to:** [First time](#first-time) · [Genre lists](#genre-lists) · [Make a playlist](#make-a-playlist) · [Change a pick](#change-a-pick) · [Outside your likes](#tracks-outside-your-likes) · [Send to rekordbox](#send-to-rekordbox) · [How it picks](#how-it-picks) · [Something went wrong](#if-something-goes-wrong) · [Updating](#updating-and-removing) · [Disclaimer](#disclaimer)
 
 ## First time
 1. Paste **your SoundCloud profile link** and press **Get my likes**. Find the link on SoundCloud: click your profile picture → **Profile**, then copy the address from the address bar, for example `https://soundcloud.com/your-name`. Your likes must be public.
@@ -32,6 +32,12 @@ Each track shows its tempo and key, **why it follows the track before** (for exa
 - **Other options:** shows the next-best tracks for that spot. They mix well after the track before and into the track after. Press **Use this** to swap one in.
 - **Doesn't work after #…:** you tried this change and it didn't sound right. djnext remembers that pair, never puts those two together again, and picks the rest of the playlist again from there.
 - **Don't use:** keeps a track out of every playlist (all uploads of that song). **Your genre lists → Not used** lists them; press **Use again** to bring one back.
+
+## Tracks outside your likes
+Under every track in a playlist, **Fits after this, not in your likes ▾** lists tracks that professional DJs around the world played right after it (from their tracklists on MixesDB), which you haven't liked yet. The ones played straight after it in the most sets come first, with a bonus if they also led into your next track.
+- They're suggestions only: they never go into the playlist itself.
+- **Find on SoundCloud** opens a search for it. Like it? Play it from SoundCloud, or ♥ it there and add it to rekordbox (djnext's yellow bar shows how), and from then on djnext can pick it too.
+- djnext doesn't know their tempo or key until they're in rekordbox, so check that by ear.
 
 ## Send to rekordbox
 1. **Quit rekordbox** (⌘Q). The button only works while rekordbox is closed.

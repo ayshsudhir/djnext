@@ -223,3 +223,13 @@ def test_make_another_gives_a_new_playlist(client):
     assert tracks[last[0]] == 1.5 and pairs[(last[0], last[1])] == 2.5  # the same change again is avoided most
     tracks_hot, _ = service.recent_penalties("tech-house", hot={last[0]: 1.0})
     assert tracks_hot[last[0]] == 0.0  # a hot track can come straight back
+
+
+def test_outside_suggestions_endpoint(client, monkeypatch):
+    p = client.post("/api/playlist", json={"genre": "tech-house", "length": 4}).json()
+    fake = [mixesdb.Outside("Someone Else", "Not Yours [Label]", after=2, sets=["2026-01-01 - DJ X"])]
+    monkeypatch.setattr(mixesdb, "outside_neighbours", lambda *a, **k: fake)
+    d = client.post("/api/playlist/outside", json={"position": 1}).json()
+    o = d["tracks"][0]
+    assert o["title"] == "Not Yours" and "straight after this in 2 DJ sets" in o["why"]
+    assert o["soundcloud"].startswith("https://soundcloud.com/search/sounds?q=Someone%20Else%20Not%20Yours")

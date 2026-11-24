@@ -63,3 +63,18 @@ def test_store_round_trip_and_todo(tmp_path, monkeypatch):
     assert again.tracks.keys() == store.tracks.keys() and again.todo(LIKED[:3]) == [LIKED[2]]
     assert again.sets["Set A"][1] == ("Beltran", "Smack Yo' [Solid Grooves Raw]")
     assert again.categories == {"Set A": ["Tech House", "House", "Players"], "Set B": ["Techno"]}  # genre tags too
+
+
+def test_outside_tracks_dj_play_after_yours(monkeypatch):
+    monkeypatch.setattr(mixesdb, "PAUSE_S", 0)
+    store = mixesdb.Store()
+    yours = [LIKED[0], LIKED[1], LIKED[2], LIKED[3]]  # Smack Yo', By Myself, Freaky 1, Diet Coke
+    for t in yours:
+        mixesdb.lookup(t, store, get=fake_get([]))
+    # After Diet Coke (Set A): Smack Yo' (yours) -> skipped, By Myself (yours) -> skipped, "Someone Else - Not Yours"
+    out = mixesdb.outside_neighbours(LIKED[3], store, yours, nxt=LIKED[2])
+    assert [(o.artist, o.title) for o in out] == [("Someone Else", "Not Yours")]
+    assert out[0].near == 1 and out[0].after == 0 and out[0].into_next == 1  # Freaky 1 came right after it
+    # after By Myself: Set A -> Someone Else (straight after); Set B -> "?" lines are ignored
+    out2 = mixesdb.outside_neighbours(LIKED[1], store, yours)
+    assert out2[0].title == "Not Yours" and out2[0].after == 1

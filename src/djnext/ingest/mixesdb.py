@@ -223,3 +223,76 @@ def pairs(pool: Sequence[Track], store: Store, now: Optional[datetime] = None) -
             if hits:
                 out.artist_affinity[(a, b.id)] = hits / len(sets_a)
     return out
+
+
+# ---------- tracks outside your likes that DJs play next to yours ----------
+
+_JUNK = {"id", "unknown", "unreleased", "untitled", "tba"}
+
+
+def _is_junk(artist: str, title: str) -> bool:
+    a, t = " ".join(names.words(artist)), " ".join(names.words(title.split("[")[0]))
+    return not a or not t or a in _JUNK or t in _JUNK or a.startswith("id ") or t.startswith("id ")
+
+
+def _key(artist: str, title: str) -> str:
+    import re
+
+    core = re.sub(r"[(\[].*", "", title)
+    return " ".join(names.words(artist)) + " | " + " ".join(names.words(core))
+
+
+@dataclass
+class Outside:
+    artist: str
+    title: str  # as written in the tracklist (with the remix name)
+    after: int = 0  # DJ sets that played it straight after your track
+    near: int = 0  # ... within 3 tracks after it
+    into_next: int = 0  # ... and it was followed (within 3) by the next track of your playlist
+    sets: List[str] = field(default_factory=list)
+
+    @property
+    def score(self) -> float:
+        return 3.0 * self.after + 1.0 * self.near + 2.0 * self.into_next
+
+
+def outside_neighbours(track: Track, store: Store, yours: Sequence[Track], nxt: Optional[Track] = None,
+                       top: int = 5) -> List[Outside]:
+    """Tracks NOT in your likes that pro DJs played right after `track` (strongest first)."""
+    me = names.of(track)
+    nxt_name = names.of(nxt) if nxt is not None else None
+    your_names = [names.of(t) for t in yours]
+    found: Dict[str, Outside] = {}
+    for st in store.tracks.get(track.id, {}).get("sets", []):
+        lines = store.sets.get(st, [])
+        for i, (a, t) in enumerate(lines):
+            if not names.matches(me, a, t):
+                continue
+            for gap in (1, 2, 3):
+                if i + gap >= len(lines):
+                    break
+                ca, ct = lines[i + gap]
+                if _is_junk(ca, ct) or names.matches(me, ca, ct):
+                    continue
+                k = _key(ca, ct)
+                o = found.get(k)
+                if o is None:
+                    if any(names.matches(n, ca, ct) for n in your_names):
+                        found[k] = None  # already in your likes
+                        continue
+                    o = found[k] = Outside(ca, ct)
+                elif o is None:
+                    continue
+                if st in o.sets:
+                    continue
+                o.sets.append(st)
+                if gap == 1:
+                    o.after += 1
+                else:
+                    o.near += 1
+                if nxt_name is not None and any(names.matches(nxt_name, *lines[j])
+                                                 for j in range(i + gap + 1, min(len(lines), i + gap + 4))):
+                    o.into_next += 1
+            break  # one position per set is enough
+    out = [o for o in found.values() if o is not None]
+    return sorted(out, key=lambda o: (o.score, len(o.sets)), reverse=True)[:top]

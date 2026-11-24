@@ -320,6 +320,34 @@ def options(body: SlotIn):
     return {"options": [{**_track(m.track, ev), "why": m.why} for m in alts]}
 
 
+@app.post("/api/playlist/outside")
+def outside(body: SlotIn):
+    """Tracks NOT in your likes that pro DJs played right after this one (from their tracklists)."""
+    import urllib.parse
+
+    _, pool, _ = _load()
+    pl: Optional[picker.Playlist] = STATE["playlist"]
+    if pl is None or not 0 <= body.position < len(pl.steps):
+        raise HTTPException(400, "Make a playlist first.")
+    t = pl.steps[body.position].track
+    nxt = pl.steps[body.position + 1].track if body.position + 1 < len(pl.steps) else None
+    found = mixesdb.outside_neighbours(t, mixesdb.Store.load(), pool, nxt)
+    out = []
+    for o in found:
+        bits = []
+        if o.after:
+            bits.append(f"played straight after this in {o.after} DJ set{'s' if o.after > 1 else ''}")
+        if o.near:
+            bits.append(f"close after it in {o.near} more")
+        if o.into_next:
+            bits.append("and it led into your next track")
+        q = urllib.parse.quote(f"{o.artist} {o.title.split('[')[0]}".strip())
+        out.append({"artist": o.artist, "title": o.title.split(" [")[0], "why": ", ".join(bits),
+                    "example": o.sets[0], "soundcloud": f"https://soundcloud.com/search/sounds?q={q}"})
+    checked = t.id in mixesdb.Store.load().tracks
+    return {"tracks": out, "checked": checked}
+
+
 class ReplaceIn(BaseModel):
     position: int
     track_id: str
