@@ -198,3 +198,9 @@ def test_likes_missing_from_rekordbox(client, monkeypatch):
     monkeypatch.setattr(webapp.sc, "load", lambda *a, **k: data)
     assert client.get("/api/status").json()["counts"]["not_in_rekordbox"] == 1
     assert [t["url"] for t in client.get("/api/missing").json()["tracks"]] == ["https://soundcloud.com/x/new"]
+
+
+def test_hidden_always_hides(client):
+    """Bars styled with display:flex must still disappear when hidden (they did not in 0.3.2)."""
+    html = client.get("/").text
+    assert "[hidden] { display: none !important; }" in html
