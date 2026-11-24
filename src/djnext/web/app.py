@@ -264,8 +264,12 @@ def make_playlist(body: MakeIn):
                                  "tracks into this list under “Your genre lists”.")
     STATE["genre"] = body.genre
     start = next((t for t in pool if t.id == body.start_id), None) if body.start_id else None
+    import random
+
     STATE["playlist"] = picker.build(pool, ev, length=body.length, start=start,
-                                     shape=body.shape if body.shape in picker.SHAPES else "build")
+                                     shape=body.shape if body.shape in picker.SHAPES else "build",
+                                     recent=service.recent_penalties(body.genre), rng=random.Random())
+    service.remember_playlist(body.genre, [t.id for t in STATE["playlist"].tracks])
     return _playlist_json()
 
 
@@ -332,8 +336,11 @@ def rebuild_from(body: SlotIn):
     dropped = pl.steps[body.position].track
     service.block_pair(keep[-1].id, dropped.id)
     STATE["ev"] = ev = service.evidence(STATE["lib"], all_tracks)
+    import random
+
+    genre = STATE.get("genre") or "tech-house"
     rest = picker.build(pool, ev, length=len(pl.steps) - len(keep) + 1, start=keep[-1], shape=pl.shape,
-                        avoid={t.id for t in keep[:-1]})
+                        avoid={t.id for t in keep[:-1]}, recent=service.recent_penalties(genre), rng=random.Random())
     STATE["playlist"] = _restep(keep + rest.tracks[1:], pl.shape, ev)
     return _playlist_json()
 

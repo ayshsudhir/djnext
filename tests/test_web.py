@@ -204,3 +204,14 @@ def test_hidden_always_hides(client):
     """Bars styled with display:flex must still disappear when hidden (they did not in 0.3.2)."""
     html = client.get("/").text
     assert "[hidden] { display: none !important; }" in html
+
+
+def test_make_another_gives_a_new_playlist(client):
+    seen = []
+    for _ in range(3):
+        p = client.post("/api/playlist", json={"genre": "tech-house", "length": 4}).json()
+        seen.append(tuple(s["id"] for s in p["steps"]))
+    assert len(set(seen)) >= 2  # not the same playlist over and over
+    recent = service.read_settings()["recent_playlists"]["tech-house"]
+    assert [tuple(x) for x in recent] == seen[::-1]  # newest first, last 3 kept
+    assert service.recent_penalties("tech-house")[seen[-1][0]] == 3.0

@@ -136,6 +136,7 @@
       </div>
       <button class="btn" id="makeBtn">Make playlist</button>
     </div>
+    <div class="sub" id="freshNote" style="margin-top:10px">Every playlist is different: tracks from your last 3 playlists of this genre step aside so others get a turn.</div>
     <div class="msg" id="makeMsg"></div>
   </section>
 
@@ -228,6 +229,7 @@ function renderStatus(s) {
 
 function renderGenres() {
   if (!S || !S.genres) return;
+  $("makeBtn").textContent = PL && PL.steps && PL.steps.length && PL.genre === GENRE ? "Make another" : "Make playlist";
   $("genre").innerHTML = S.genres.filter(g => g.count).map(g => `<button data-genre="${g.id}" class="${g.id === GENRE ? "on" : ""}" ${g.count < 3 ? "disabled" : ""}>${esc(g.name)}<span>${g.count}</span></button>`).join("");
   const keep = $("start").value;
   const inGenre = S.tracks.filter(t => t.genre === GENRE).sort((a, b) => a.bpm - b.bpm);
@@ -242,6 +244,7 @@ function cueText(cues) {
 
 function renderPlaylist(p) {
   PL = p;
+  $("makeBtn").textContent = p.steps && p.steps.length ? "Make another" : "Make playlist";
   const has = p.steps && p.steps.length;
   $("result").hidden = !has; $("bar").hidden = !has;
   if (!has) return;

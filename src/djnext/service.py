@@ -122,6 +122,29 @@ def evidence(lib: Library, pool: List[Track]) -> picker.Evidence:
     return picker.Evidence.build(dj, blocked)
 
 
+# ---------- a different playlist every time ----------
+
+RECENT_KEEP = 3  # remember the last 3 playlists per genre
+RECENT_PENALTY = (3.0, 2.0, 1.0)  # last playlist's tracks step aside most; three playlists ago only a little
+
+
+def recent_penalties(genre: str) -> Dict[str, float]:
+    """{track id: how strongly to avoid it} from your last playlists of this genre."""
+    lists = (read_settings().get("recent_playlists") or {}).get(genre) or []
+    out: Dict[str, float] = {}
+    for age, ids in enumerate(lists[:RECENT_KEEP]):
+        for tid in ids:
+            out[tid] = max(out.get(tid, 0.0), RECENT_PENALTY[age])
+    return out
+
+
+def remember_playlist(genre: str, track_ids: List[str]) -> None:
+    allp = read_settings().get("recent_playlists") or {}
+    allp[genre] = [list(track_ids)] + [ids for ids in (allp.get(genre) or []) if ids != list(track_ids)]
+    allp[genre] = allp[genre][:RECENT_KEEP]
+    save_settings({"recent_playlists": allp})
+
+
 def block_pair(a_id: str, b_id: str) -> None:
     pairs = [list(p) for p in read_settings().get("blocked_pairs") or []]
     if [a_id, b_id] not in pairs:

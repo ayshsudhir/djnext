@@ -13,6 +13,7 @@ For every possible 'A then B' djnext checks, in this order:
 from __future__ import annotations
 
 import math
+import random
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
@@ -273,10 +274,29 @@ def _flow_penalty(seq: Sequence[Track], b: Track, energy: Dict[str, float], i: i
     return p
 
 
+VARIETY = 0.6  # how much chance mixes up close calls (score points); 0 = always the same playlist
+
+
 def build(tracks: Sequence[Track], ev: Evidence, length: int = 12, start: Optional[Track] = None,
-          shape: str = "build", beam: int = 16, avoid: Iterable[str] = ()) -> Playlist:
-    """The best chain of `length` tracks (looking ahead, so one good pair doesn't lead into a dead end)."""
+          shape: str = "build", beam: int = 16, avoid: Iterable[str] = (),
+          recent: Optional[Dict[str, float]] = None, rng: Optional[random.Random] = None,
+          variety: float = VARIETY) -> Playlist:
+    """The best chain of `length` tracks (looking ahead, so one good pair doesn't lead into a dead end).
+
+    A different playlist every time: `recent` = {track id: penalty} for tracks in your last few playlists of this
+    genre (they step aside so others get a turn), and `rng` adds a little chance to close calls and the opener.
+    The hard rules (tempo, key, artist) never bend for variety."""
     avoid = set(avoid)
+    recent = recent or {}
+    noise: Dict[Tuple[str, str], float] = {}
+
+    def luck(a_id: str, b_id: str, spread: float = variety) -> float:
+        if rng is None or spread <= 0:
+            return 0.0
+        k = (a_id, b_id)
+        if k not in noise:
+            noise[k] = rng.gauss(0.0, spread)
+        return noise[k]
     tracks = [t for t in tracks if t.id not in avoid or (start is not None and t.id == start.id)]
     if not tracks:
         raise ValueError("No tracks to pick from.")
@@ -295,8 +315,9 @@ def build(tracks: Sequence[Track], ev: Evidence, length: int = 12, start: Option
     else:
         def opener(t: Track) -> float:
             links = sorted((m.score for b in tracks if (m := mv(t, b)) is not None), reverse=True)[:3]
-            return (-2.0 * (energy.get(t.id, 0.5) - target_energy(0, length, shape)) ** 2
+            base = (-2.0 * (energy.get(t.id, 0.5) - target_energy(0, length, shape)) ** 2
                     + 0.3 * sum(links) / 3 if links else -5.0)
+            return base - recent.get(t.id, 0.0) + luck("", t.id, 2 * variety)
         beams = [([t], opener(t)) for t in sorted(tracks, key=opener, reverse=True)[:beam]]
 
     for i in range(1, length):
@@ -310,7 +331,8 @@ def build(tracks: Sequence[Track], ev: Evidence, length: int = 12, start: Option
             if not options:  # nothing in key: allow two steps on the wheel rather than stopping
                 options = [(b, move(a, b, ev)) for b in tracks if b.id not in used and mixable(a, b, 2)]
             for b, m in options:
-                grown.append((seq + [b], total + m.score + _flow_penalty(seq, b, energy, i, length, shape, ev)))
+                grown.append((seq + [b], total + m.score + _flow_penalty(seq, b, energy, i, length, shape, ev)
+                              - recent.get(b.id, 0.0) + luck(a.id, b.id)))
         if not grown:
             break
         grown.sort(key=lambda x: x[1], reverse=True)

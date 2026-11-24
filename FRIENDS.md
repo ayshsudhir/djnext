@@ -24,6 +24,8 @@ Your likes are sorted into **Groovy techno, Tech house, House, Indie dance & mel
 4. Optional: **Start with** a track you want to open with. Otherwise djnext chooses.
 5. Press **Make playlist**. It only uses tracks from that genre list.
 
+**A different playlist every time:** press **Make another** for a new one. djnext remembers your last 3 playlists for each genre and lets other tracks have a turn (the most recent playlist's tracks step aside most), and close calls go a different way each time. The mixing rules never bend for variety.
+
 Each track shows its tempo and key, **why it follows the track before** (for example *real DJs played it straight after this twice*, or *you've mixed these before*), and the **hot cues** it will get.
 
 ## Change a pick

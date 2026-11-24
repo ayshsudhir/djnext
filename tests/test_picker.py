@@ -105,3 +105,19 @@ def test_your_own_past_sets_are_not_a_factor():
 
     assert "history" not in inspect.signature(picker.Evidence.build).parameters
     assert not hasattr(fake_library(), "history")
+
+
+def test_a_different_playlist_every_time():
+    import random
+
+    lib, (pool, _) = _pool()
+    ev = picker.Evidence.build()
+    first = picker.build(pool, ev, length=5, rng=random.Random(1))
+    recent = {t.id: 3.0 for t in first.tracks}  # what service.recent_penalties gives right after
+    second = picker.build(pool, ev, length=5, recent=recent, rng=random.Random(2))
+    assert first.tracks != second.tracks
+    assert len({t.id for t in first.tracks} & {t.id for t in second.tracks}) <= 3  # mostly new tracks
+    for a, b in zip(second.tracks, second.tracks[1:]):  # variety never breaks the hard rules
+        assert picker.tempo_gap(a, b) <= picker.MAX_TEMPO_GAP and not picker.same_artist(a, b)
+    same = picker.build(pool, ev, length=5)  # no chance, no history: the same best playlist every time
+    assert same.tracks == picker.build(pool, ev, length=5).tracks
