@@ -1,7 +1,7 @@
 """djnext as a Mac app: its own window, a Dock icon, and data where Mac apps keep theirs.
 
 This is what djnext.app runs. It
-  - keeps your settings, SoundCloud lists, ratings and backups in ~/Library/Application Support/djnext
+  - keeps your settings, SoundCloud likes, DJ-tracklist cache and backups in ~/Library/Application Support/djnext
     (the app itself stays read-only in /Applications, so an update never touches your data),
   - writes a log to ~/Library/Logs/djnext.log (handy when something goes wrong),
   - starts the local web server on a free port, only reachable from this Mac,
@@ -89,89 +89,7 @@ def _wait_until_up(url: str, timeout: float = 30.0) -> bool:
     return False
 
 
-def _onboarded() -> bool:
-    import json
-
-    p = Path("data/settings.json")
-    try:
-        if json.loads(p.read_text(encoding="utf-8")).get("onboarded"):
-            return True
-    except Exception:
-        pass
-    return Path("data/soundcloud.json").exists()
-
-
-class Windows:
-    """djnext's one window, and the functions its pages can call (window.pywebview.api.*).
-
-    The window switches between two modes instead of opening a second window:
-      - Live: a narrow strip at the right edge of the screen, kept on top of rekordbox;
-      - set builder (and the first-time setup): a bigger window in the middle, not on top.
-    """
-
-    LIVE_WIDTH = 420
-    MAIN_SIZE = (900, 760)  # set builder: room for the energy chart, still fits beside rekordbox
-    SETUP_SIZE = (540, 800)  # first-time setup: just the setup card
-
-    def __init__(self, webview, url: str):
-        self._wv, self._url = webview, url
-        self._win = None
-        self._mode = None
-        self._pinned = True  # Live stays on top unless you switch it off with the pin button
-
-    def _screen(self):
-        try:
-            s = self._wv.screens[0]
-            return s.width, s.height
-        except Exception:
-            return 1440, 900
-
-    def _live_geometry(self):
-        sw, sh = self._screen()
-        return self.LIVE_WIDTH, min(940, sh - 60), sw - self.LIVE_WIDTH - 12, 30
-
-    def _main_geometry(self, setup: bool):
-        sw, sh = self._screen()
-        w, h = self.SETUP_SIZE if setup else self.MAIN_SIZE
-        w, h = min(w, sw - 40), min(h, sh - 80)
-        return w, h, (sw - w) // 2, max(30, (sh - h) // 3)
-
-    def create(self, live: bool, setup: bool = False):
-        """The window, made once at start-up (shows a splash until the page is ready)."""
-        w, h, x, y = self._live_geometry() if live else self._main_geometry(setup)
-        self._mode = "live" if live else "main"
-        self._win = self._wv.create_window(
-            APP_NAME, html=SPLASH, width=w, height=h, x=x, y=y, min_size=(360, 520), on_top=live,
-            background_color="#0c0b12", text_select=True, js_api=self)
-        return self._win
-
-    def _switch(self, live: bool) -> None:
-        win = self._win
-        if win is None:
-            return
-        w, h, x, y = self._live_geometry() if live else self._main_geometry(setup=False)
-        self._mode = "live" if live else "main"
-        win.on_top = live and self._pinned
-        win.resize(w, h)
-        win.move(x, y)
-        win.load_url(self._url + ("/live" if live else "/"))
-
-    # called from the pages (return plain values only)
-    def open_main(self) -> None:
-        self._switch(live=False)
-
-    def open_live(self) -> None:
-        self._switch(live=True)
-
-    def toggle_on_top(self) -> bool:
-        if self._win is None or self._mode != "live":
-            return False
-        self._pinned = not self._pinned
-        self._win.on_top = self._pinned
-        return self._pinned
-
-    def is_on_top(self) -> bool:
-        return bool(self._win is not None and self._mode == "live" and self._win.on_top)
+WINDOW_SIZE = (860, 900)
 
 
 def main() -> None:
@@ -193,20 +111,24 @@ def main() -> None:
         threading.Event().wait()
         return
 
-    windows = Windows(webview, url)
-    first_run = not _onboarded()
-    # The app opens as the small Live window next to rekordbox; the very first start shows the setup instead.
-    first = windows.create(live=not first_run, setup=first_run)
+    try:
+        screen = webview.screens[0]
+        sw, sh = screen.width, screen.height
+    except Exception:
+        sw, sh = 1440, 900
+    w, h = min(WINDOW_SIZE[0], sw - 40), min(WINDOW_SIZE[1], sh - 60)
+    window = webview.create_window(APP_NAME, html=SPLASH, width=w, height=h, x=(sw - w) // 2, y=30,
+                                   min_size=(380, 520), background_color="#0d0c12", text_select=True)
 
     def _load_when_ready():
         if not _wait_until_up(url):
-            first.load_html("<body style='background:#0c0b12;color:#eee;font:16px -apple-system;padding:40px'>"
-                            f"djnext couldn't start. Details are in {LOG_FILE}.</body>")
+            window.load_html("<body style='background:#0d0c12;color:#eee;font:16px -apple-system;padding:40px'>"
+                             f"djnext couldn't start. Details are in {LOG_FILE}.</body>")
             return
-        first.load_url(url + ("/" if first_run else "/live"))
+        window.load_url(url + "/")
 
-    webview.settings["OPEN_EXTERNAL_LINKS_IN_BROWSER"] = True  # SoundCloud links open in your browser
-    webview.start(_load_when_ready)  # returns when the last window is closed
+    webview.settings["OPEN_EXTERNAL_LINKS_IN_BROWSER"] = True
+    webview.start(_load_when_ready)  # returns when the window is closed
     os._exit(0)  # stop the server thread too
 
 

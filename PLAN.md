@@ -1,5 +1,28 @@
 # Next Song Recommender for DJing (DDJ-FLX4 + rekordbox)
 
+## Now (v0.3, 2026-11-23): one thing, done well
+The v0.2 app did too much and its picks were weak. A backtest against rekordbox history (816 back-to-back pairs) showed the
+key/BPM/energy score ranked the track actually played next at a median of 398 of 827, the same as random. So v0.3 does one
+thing: **pick the best next track from your SoundCloud likes (one genre list at a time), chain those picks into a playlist, and
+send it to rekordbox with hot cues.**
+
+- Removed: Live mode and the crowd knob, moods, the energy-curve set builder, Discover, ratings/feedback, reports, .m3u export.
+- Pool: SoundCloud **likes only** (no playlists), analysed in rekordbox, sorted into genre lists (groovy techno, tech house,
+  house, indie dance & melodic, hard & fast, other) from MixesDB set categories + tags + tempo; you can move any track.
+  A playlist comes from one genre list. The lists can also be sent to rekordbox ("djnext genres" folder).
+- Hard rules: tempo within 5%, at most one Camelot step, never the same artist or remixer back to back.
+- What makes a pick good, strongest first: real DJs played the pair back to back (MixesDB tracklists), you mixed it
+  before (rekordbox history), same DJ sets / same scene, a long intro, small climbing tempo steps, energy shape.
+- No audio analysis (too slow and heavy for this Mac); "groove" comes from which tracks DJs play together.
+- 1001tracklists has the best data but blocks bots, so it isn't used. YouTube set videos rarely carry tracklists.
+
+Next ideas (only if the playlists still don't sound right): a backtest on MixesDB sets (hide one set, predict its pairs);
+"Doesn't work" feedback weighting DJ evidence down; better groovy-techno vs tech-house split (MixesDB rarely separates them).
+
+The plan below is the original v0.1–v0.2 plan, kept for history.
+
+---
+
 ## Context
 You want a personal tool that looks at your songs (your SoundCloud likes and your rekordbox library) and tells you **what to play next**, or gives you a **whole set in playing order** for the DDJ-FLX4. It's a pet project, so it should cost nothing.
 

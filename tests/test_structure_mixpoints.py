@@ -2,7 +2,6 @@ from djnext.config import Config
 from djnext.core.mix_advice import advise
 from djnext.core.mix_points import plan
 from djnext.core.models import Track
-from djnext.core.sequencer import play_seconds
 from djnext.core.structure import TrackStructure, phrase_label
 
 CFG = Config()
@@ -74,11 +73,6 @@ def test_echo_out_timing_and_no_structure():
     plain = Track("p", "plain", bpm=124, key="8A", energy=6)
     assert plan(a, plain, "bass_swap", CFG) is None  # no analysis -> no timing, advice still works
     assert advise(a, plain, CFG).timing == []
-
-
-def test_play_seconds_uses_outro():
-    t = T("a", 128, "8A", 6, make(128, STD, 448))
-    assert abs(play_seconds(t, CFG) - t.structure.outro.start_s) < 1e-6
 
 
 def test_cue_plan_for_a_set():

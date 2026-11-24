@@ -16,7 +16,7 @@ from typing import List, Optional, Sequence
 from ..paths import rekordbox_db_dir
 
 FOLDER_NAME = "djnext"
-MOODS_FOLDER = "djnext moods"
+GENRES_FOLDER = "djnext genres"
 DEFAULT_BACKUP_DIR = Path("data/backups")
 _FILES = ("master.db", "master.db-wal", "master.db-shm", "masterPlaylists6.xml")
 
@@ -89,7 +89,7 @@ def write_to_rekordbox(
     name: str = "",
     cues: Optional[Sequence] = None,
     remove_own_cues: bool = False,
-    mood_playlists: Optional[dict] = None,  # {"🔥 Banging": [content ids]} -> "djnext moods" folder
+    genre_playlists: Optional[dict] = None,  # {"Tech house": [content ids]} -> "djnext genres" folder
     db_dir: Optional[Path] = None,
     backup_dir: Optional[Path] = DEFAULT_BACKUP_DIR,
     check_running: bool = True,
@@ -103,7 +103,7 @@ def write_to_rekordbox(
     db_dir = db_dir or rekordbox_db_dir()
     if check_running and rekordbox_running():
         raise RekordboxRunning("rekordbox is open: close it, then run this again")
-    if not content_ids and not cues and not remove_own_cues and not mood_playlists:
+    if not content_ids and not cues and not remove_own_cues and not genre_playlists:
         raise ValueError("nothing to write")
     backup_path = backup(db_dir, backup_dir) if backup_dir is not None else None
 
@@ -120,23 +120,22 @@ def write_to_rekordbox(
             for cid in content_ids:
                 db.add_to_playlist(playlist, int(cid))
             result.update(name=final_name, tracks=len(content_ids))
-        if mood_playlists:
-            folders = [p for p in db.get_playlist().all() if p.Name == MOODS_FOLDER and p.Attribute == 1]
-            mfolder = folders[0] if folders else db.create_playlist_folder(MOODS_FOLDER)
+        if genre_playlists:
+            folders = [p for p in db.get_playlist().all() if p.Name == GENRES_FOLDER and p.Attribute == 1]
+            gfolder = folders[0] if folders else db.create_playlist_folder(GENRES_FOLDER)
             existing = {p.Name: p for p in db.get_playlist().all()
-                        if str(p.ParentID) == str(mfolder.ID) and p.Attribute == 0}
+                        if str(p.ParentID) == str(gfolder.ID) and p.Attribute == 0}
             made = {}
-            for pl_name, ids in mood_playlists.items():
-                if pl_name in existing:  # our own mood playlist from last time: refresh it
+            for pl_name, ids in genre_playlists.items():
+                if pl_name in existing:  # our own list from last time: refresh it
                     db.delete_playlist(existing[pl_name])
                 if not ids:
                     continue
-                pl = db.create_playlist(pl_name, parent=mfolder)
+                pl = db.create_playlist(pl_name, parent=gfolder)
                 for cid in ids:
                     db.add_to_playlist(pl, int(cid))
                 made[pl_name] = len(ids)
-            result["mood_playlists"] = made
-            result["moods_folder"] = MOODS_FOLDER
+            result.update(genre_playlists=made, genres_folder=GENRES_FOLDER)
         if remove_own_cues:
             result["removed_cues"] = remove_cues(db)
         if cues:

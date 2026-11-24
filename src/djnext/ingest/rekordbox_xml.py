@@ -16,6 +16,7 @@ from ..core.models import Track
 class Library:
     tracks: Dict[str, Track] = field(default_factory=dict)
     playlists: Dict[str, List[str]] = field(default_factory=dict)  # "Folder/Name" -> track ids
+    history: List[List[str]] = field(default_factory=list)  # your past sessions (rekordbox History), track ids in play order
 
     def playlist_tracks(self, name: str) -> List[Track]:
         if name in self.playlists:

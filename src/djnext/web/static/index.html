@@ -1,313 +1,334 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>djnext</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💿</text></svg>">
-  <link rel="stylesheet" href="/static/app.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>djnext</title>
+<style>
+  :root {
+    --bg: #0d0c12; --card: #17151f; --line: #2a2735; --text: #f2f0f7; --dim: #9a95a8;
+    --accent: #c6ff3d; --accent-ink: #11140a; --warn: #ffb547; --bad: #ff6b6b; --good: #7ee08a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  main { max-width: 820px; margin: 0 auto; padding: 22px 16px 120px; }
+  h1 { font-size: 22px; margin: 0; letter-spacing: -.3px; }
+  h1 span { color: var(--accent); }
+  .sub { color: var(--dim); font-size: 13px; margin-top: 2px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-top: 16px; }
+  label.f { display: block; color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+  .row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+  .row > div { min-width: 0; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+  .seg button { background: none; border: 0; color: var(--dim); padding: 8px 12px; font: inherit; cursor: pointer; }
+  .seg button.on { background: var(--line); color: var(--text); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chips button { background: none; border: 1px solid var(--line); color: var(--text); border-radius: 999px; padding: 7px 13px; font: inherit; cursor: pointer; }
+  .chips button span { color: var(--dim); margin-left: 4px; font-variant-numeric: tabular-nums; }
+  .chips button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 650; }
+  .chips button.on span { color: var(--accent-ink); opacity: .7; }
+  .chips button:disabled { opacity: .4; cursor: default; }
+  .glist h3 { font-size: 14px; margin: 18px 0 4px; display: flex; justify-content: space-between; }
+  .glist h3 span { color: var(--dim); font-weight: 400; }
+  .guess { color: var(--warn); font-weight: 700; margin-right: 4px; cursor: help; }
+  .prow select { width: auto; padding: 4px 6px; font-size: 12.5px; }
+  select, input[type=text] { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font: inherit; max-width: 100%; }
+  select { width: 300px; }
+  .btn { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 9px; padding: 10px 16px; font: inherit; font-weight: 650; cursor: pointer; }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .ghost { background: none; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+  .ghost:hover { border-color: var(--dim); }
+  .link { background: none; border: 0; color: var(--dim); text-decoration: underline; cursor: pointer; font: inherit; font-size: 13px; padding: 0; }
+  ol { list-style: none; margin: 0; padding: 0; }
+  li.step { display: grid; grid-template-columns: 34px 1fr auto; gap: 4px 12px; padding: 14px 0; border-top: 1px solid var(--line); }
+  li.step:first-child { border-top: 0; }
+  .num { color: var(--dim); font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 600; padding-top: 1px; }
+  .title { font-weight: 650; }
+  .artist { color: var(--dim); }
+  .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .tag { font-size: 12px; padding: 1px 7px; border-radius: 6px; background: var(--line); color: var(--text); font-variant-numeric: tabular-nums; }
+  .tag.known { background: #3b2f12; color: var(--warn); }
+  .why { color: var(--text); font-size: 13.5px; margin-top: 6px; }
+  .why.first { color: var(--dim); }
+  .why .warn { color: var(--warn); }
+  .cues { color: var(--dim); font-size: 12.5px; margin-top: 4px; }
+  .cues b { color: var(--accent); font-weight: 600; }
+  .acts { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+  .opts { grid-column: 2 / 4; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin-top: 8px; }
+  .opt { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); align-items: center; }
+  .opt:first-child { border-top: 0; }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(13,12,18,.96); border-top: 1px solid var(--line); }
+  .bar .in { max-width: 820px; margin: 0 auto; padding: 12px 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .bar input { flex: 1 1 200px; }
+  .msg { font-size: 13.5px; margin-top: 10px; }
+  .msg.ok { color: var(--good); } .msg.err { color: var(--bad); } .msg.warn { color: var(--warn); }
+  details { margin-top: 16px; }
+  summary { cursor: pointer; color: var(--dim); font-size: 14px; }
+  .pool { margin-top: 10px; max-height: 340px; overflow: auto; }
+  .prow { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 13.5px; align-items: center; }
+  .progress { height: 4px; background: var(--line); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+  .progress div { height: 100%; background: var(--accent); transition: width .4s; }
+  .empty { color: var(--dim); text-align: center; padding: 26px 0 10px; }
+  @media (max-width: 560px) {
+    select { width: 100%; }
+    .row > div { width: 100%; }
+    li.step { grid-template-columns: 26px 1fr; }
+    .acts { grid-column: 2; flex-direction: row; align-items: center; justify-content: flex-start; }
+    .opts { grid-column: 1 / 3; }
+  }
+</style>
 </head>
 <body>
-  <header class="top">
-    <div class="brand">
-      <svg class="logo" viewBox="0 0 40 40" aria-hidden="true">
-        <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7a45"/><stop offset="1" stop-color="#ff3d8b"/></linearGradient></defs>
-        <circle cx="20" cy="20" r="18" fill="url(#lg)"/><circle cx="20" cy="20" r="11" fill="none" stroke="#0c0b12" stroke-opacity=".35" stroke-width="1.2"/>
-        <circle cx="20" cy="20" r="7" fill="none" stroke="#0c0b12" stroke-opacity=".35" stroke-width="1.2"/><circle cx="20" cy="20" r="3.2" fill="#0c0b12"/>
-      </svg>
-      <span>djnext</span>
-      <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+<main>
+  <h1>dj<span>next</span></h1>
+  <div class="sub" id="sub">Loading your likes…</div>
+
+  <!-- first time: who are you on SoundCloud -->
+  <section class="card" id="setup" hidden>
+    <label class="f" for="scuser">Your SoundCloud profile link</label>
+    <div class="row">
+      <input type="text" id="scuser" placeholder="https://soundcloud.com/your-name" style="flex:1 1 260px">
+      <button class="btn" id="syncBtn">Get my likes</button>
     </div>
-    <nav id="nav">
-      <button data-tab="make" class="active"><span class="ic">✨</span><span class="lbl">Make a set</span></button>
-      <button data-tab="music"><span class="ic">🎧</span><span class="lbl">My music</span></button>
-      <button data-tab="discover"><span class="ic">🔭</span><span class="lbl">Discover</span></button>
-      <button data-tab="rate"><span class="ic">👍</span><span class="lbl">Rate</span></button>
-      <button data-tab="settings"><span class="ic">⚙️</span><span class="lbl">Settings</span></button>
-    </nav>
-    <button id="open-live" class="live-btn" title="A small window to keep next to rekordbox while you play">🎚️ Go live</button>
-    <div id="rb-pill" class="pill" title="djnext can only write to rekordbox while rekordbox is closed">
-      <span class="dot"></span><span class="txt">rekordbox…</span>
-    </div>
-  </header>
+    <div class="sub" style="margin-top:8px">djnext only ever uses the tracks you liked. Play each liked track once in rekordbox (or drag it into your collection) so it gets analysed.</div>
+    <div class="msg" id="setupMsg"></div>
+  </section>
 
-  <main>
-    <div id="banner" class="banner hidden"></div>
-
-    <!-- ============ MAKE A SET ============ -->
-    <section id="tab-make" class="tab">
-      <div class="hero">
-        <div id="wave" class="wave" aria-hidden="true"></div>
-        <h1>What's the vibe?</h1>
-        <p class="muted">Pick a mood and djnext orders your tracks into a set that flows: matching keys, tempos that work, and energy that builds.</p>
-      </div>
-
-      <div id="moods" class="moods"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
-
-      <div class="card make-bar">
-        <div class="field">
-          <span class="label">How long?</span>
-          <div class="seg" id="length">
-            <button data-v="30">30 min</button><button data-v="45">45 min</button><button data-v="60" class="on">1 hour</button>
-            <button data-v="90">1½ hours</button><button data-v="120">2 hours</button>
-          </div>
-        </div>
-        <button id="make" class="primary big">Make my set</button>
-      </div>
-
-      <details class="card more" id="more-opts">
-        <summary>More options <span class="muted small">which lists to use, energy shape</span></summary>
-        <div class="more-body">
-          <p class="muted small" id="mood-hint"></p>
-          <div id="lists-wrap">
-            <span class="label">Use tracks from</span>
-            <div id="lists" class="lists"><p class="muted">Loading your library…</p></div>
-          </div>
-          <div class="row" id="curve-row">
-            <label>Energy shape <select id="curve"></select></label>
-            <label class="check"><input type="checkbox" id="use-style" checked> Only my style <span class="muted" id="style-hint"></span></label>
-          </div>
-        </div>
-      </details>
-
-      <div id="result" class="hidden">
-        <div class="section-title"><span class="num">1</span><h2>Your set</h2></div>
-        <div id="stats" class="stats"></div>
-        <div class="card">
-          <div class="chart-head">
-            <h3>Energy through the set</h3>
-            <div class="legend"><span class="lg target"></span>target <span class="lg yours"></span>your set</div>
-          </div>
-          <div id="chart" class="chart"></div>
-          <details class="notes"><summary class="small muted">Details about how this set was made</summary><ul id="set-notes" class="small muted"></ul></details>
-        </div>
-
-        <div class="section-title"><span class="num">2</span><h2>Put it in rekordbox</h2></div>
-        <div class="card send">
-          <div class="send-main">
-            <ol class="steps-mini">
-              <li id="step-quit"><span class="tick"></span>Quit rekordbox</li>
-              <li><span class="tick"></span>Press <b>Send to rekordbox</b></li>
-              <li><span class="tick"></span>Open rekordbox → <b>Playlists → djnext</b></li>
-            </ol>
-            <div class="row">
-              <label class="grow">Playlist name <input id="set-name" placeholder="e.g. Friday warm-up"></label>
-              <label class="check"><input type="checkbox" id="with-cues" checked> Add hot cues</label>
-            </div>
-            <button id="push" class="primary">Send to rekordbox</button>
-            <div id="push-status"></div>
-          </div>
-          <div class="pads" title="Hot cues djnext puts on your FLX4 pads">
-            <div class="pad e"><b>E</b><span>Start here</span></div>
-            <div class="pad f"><b>F</b><span>Swap basses</span></div>
-            <div class="pad g"><b>G</b><span>Start next track</span></div>
-            <p class="small muted">Hot cue pads on your controller</p>
-          </div>
-        </div>
-
-        <div class="section-title"><span class="num">3</span><h2>Mix it, track by track</h2></div>
-        <p class="muted sub">Tap a track to see <b>when</b> and <b>how</b> to mix into it.</p>
-        <div id="tracks" class="tracks"></div>
-
-        <div class="after card">
-          <span>Mixed it? Tell djnext how it sounded so the next set is better.</span>
-          <button onclick="showTab('rate')">Rate this set</button>
+  <!-- make a playlist -->
+  <section class="card" id="maker" hidden>
+    <label class="f">Genre</label>
+    <div class="chips" id="genre"></div>
+    <div class="row" style="margin-top:16px">
+      <div>
+        <label class="f">Tracks</label>
+        <div class="seg" id="len">
+          <button data-v="8">8</button><button data-v="12" class="on">12</button><button data-v="16">16</button><button data-v="20">20</button>
         </div>
       </div>
-    </section>
-
-    <!-- ============ MY MUSIC ============ -->
-    <section id="tab-music" class="tab hidden">
-      <div class="hero small-hero"><h1>My music</h1><p class="muted">Where djnext gets your tracks from.</p></div>
-      <div class="card">
-        <div class="card-head"><span class="sc-badge">☁︎</span><div><h2>SoundCloud</h2>
-          <p class="muted small">Your public likes and playlists (track lists only, nothing is downloaded).</p></div></div>
-        <details class="sc-help" id="sc-help"><summary class="small">How do I find my SoundCloud link?</summary>
-        <ol class="sc-steps">
-          <li><a class="btn-link" href="https://soundcloud.com/signin" target="_blank" rel="noopener">Open SoundCloud ↗</a> and sign in. It opens in your web browser.</li>
-          <li>Click your <b>profile picture</b> in the <b>top-right corner</b>, then click <b>Profile</b>.</li>
-          <li>Click the <b>address bar</b> at the top of the browser, press <b>⌘C</b> to copy the address, come back here and press <b>⌘V</b> to paste it below.</li>
-        </ol>
-        <p class="small muted">It looks like <code>https://soundcloud.com/your-name</code>. djnext reads your public likes and playlists (only the track lists, nothing is downloaded) and suggests <b>only those tracks that are also in your rekordbox Collection</b>. Skip this and djnext uses your whole rekordbox Collection instead.</p>
-        </details>
-        <div class="row">
-          <input id="sc-user" class="grow" placeholder="https://soundcloud.com/your-name">
-          <button id="sc-sync" class="primary">Sync</button>
+      <div>
+        <label class="f">Shape</label>
+        <div class="seg" id="shape">
+          <button data-v="build" class="on">Warm up, then build</button><button data-v="peak">Peak time</button>
         </div>
-        <p id="sc-status" class="muted small"></p>
-        <div id="sc-lists"></div>
-      </div>
-
-      <div class="card" id="missing-card">
-        <h2>Make more tracks ready <span class="muted small" id="missing-count"></span></h2>
-        <p class="muted">djnext can only suggest a track after <b>rekordbox</b> has analysed it (tempo, key, structure).
-          Tracks in your SoundCloud lists that aren't in your rekordbox Collection yet can't be used. You can add a whole list in one go:</p>
-        <ol class="fix-steps">
-          <li>Open <b>rekordbox</b>. In the left sidebar, click <b>SoundCloud</b>, then the list (for example <b>Likes</b>).
-            <span class="muted">You need to be logged in to SoundCloud in rekordbox, with a SoundCloud Go+ or DJ plan.</span></li>
-          <li>Click any track in the list, then press <b>⌘A</b> to select them all.</li>
-          <li><b>Drag</b> the selected tracks onto <b>Collection</b> at the top of the left sidebar.</li>
-          <li>Wait until rekordbox has finished analysing them (the progress bar at the top disappears).</li>
-          <li>Come back here and press <b>Reload library</b>.</li>
-        </ol>
-        <p class="small muted">Lists you don't DJ with (for example a rock playlist)? Switch off <b>Use for DJing</b> above and they stop counting.</p>
-        <div class="row">
-          <button id="reload" class="primary">Reload library</button>
-          <button id="show-missing" class="ghost">Show which tracks</button>
-        </div>
-        <div id="missing" class="small missing-groups"></div>
-      </div>
-
-      <div class="grid2">
-        <div class="card">
-          <h2>Your rekordbox library</h2>
-          <div id="library" class="libstats"></div>
-        </div>
-        <div class="card">
-          <h2>Mood playlists</h2>
-          <p class="muted small">Adds one rekordbox playlist per mood under <b>Playlists → djnext moods</b>. Quit rekordbox first.</p>
-          <button id="moods-push">Create mood playlists</button>
-          <div id="moods-push-status"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ DISCOVER ============ -->
-    <section id="tab-discover" class="tab hidden">
-      <div class="hero small-hero">
-        <h1>Discover</h1>
-        <p class="muted">New tracks on SoundCloud that fit your style, found from your best tracks and favourite artists.</p>
-      </div>
-      <div class="card how-to">
-        <div class="howstep"><span>1</span>Press <b>Find new tracks</b></div>
-        <div class="howstep"><span>2</span>Open one and ♥ like it on SoundCloud</div>
-        <div class="howstep"><span>3</span><b>My music → Sync</b>, then add it to your rekordbox collection</div>
-      </div>
-      <div class="row"><button id="discover-run" class="primary">Find new tracks</button><span id="discover-status" class="muted small"></span></div>
-      <div id="discover-list" class="disc-grid"></div>
-    </section>
-
-    <!-- ============ RATE ============ -->
-    <section id="tab-rate" class="tab hidden">
-      <div class="hero small-hero">
-        <h1>How did it sound?</h1>
-        <p class="muted">After mixing, give each transition a 👍 or 👎. Pairs you didn't like won't be put together again.</p>
-      </div>
-      <div class="card">
-        <div id="rate-list"><div class="empty">🎚️<p>Make a set first, mix it, then come back here.</p></div></div>
-        <div id="rate-overall" class="rate-overall hidden">
-          <div><span class="label">The whole set</span><div class="stars" id="stars"></div></div>
-          <input id="overall-note" class="grow" placeholder="Anything about the set as a whole?">
-          <button id="rate-save" class="primary">Save ratings</button>
-        </div>
-      </div>
-      <div class="card">
-        <h2>What your ratings say</h2>
-        <div id="feedback" class="muted">No ratings yet.</div>
-      </div>
-    </section>
-
-    <!-- ============ SETTINGS ============ -->
-    <section id="tab-settings" class="tab hidden">
-      <div class="hero small-hero"><h1>Settings</h1><p class="muted">Tell djnext what you play.</p></div>
-      <div class="card">
-        <h2>Mixing level</h2>
-        <div class="choice" id="skill">
-          <button data-v="beginner"><span class="em">🌱</span><b>Beginner</b><span>Simple, short mixes with BEAT SYNC</span></button>
-          <button data-v="advanced"><span class="em">🎛️</span><b>Advanced</b><span>Long blends, EQ work, loop rolls</span></button>
-        </div>
-      </div>
-      <div class="card">
-        <h2>My style</h2>
-        <span class="label">Quick start: pick what you play</span>
-        <div class="presets" id="presets"></div>
-        <div class="row">
-          <label>Lowest BPM <input id="bpm-min" type="number" step="1"></label>
-          <label>Highest BPM <input id="bpm-max" type="number" step="1"></label>
-        </div>
-        <span class="label">Favourite artists <span class="muted">(they get picked more often)</span></span>
-        <div class="tags" id="favs"></div>
-        <span class="label">Genres to leave out</span>
-        <div class="tags" id="excl"></div>
-        <div class="row"><button id="save-style" class="primary">Save</button></div>
-      </div>
-      <div class="card">
-        <h2>Safety</h2>
-        <p class="muted small">Every change djnext makes to rekordbox is backed up first. Quit rekordbox before using these.</p>
-        <div class="row">
-          <button id="undo">↩︎ Undo last change</button>
-          <button id="remove-cues" class="ghost">Remove djnext hot cues</button>
-        </div>
-      </div>
-      <div class="card">
-        <h2>Tip: better energy</h2>
-        <p class="muted">Star-rate tracks in rekordbox (1★ chill … 5★ peak-time). Without ratings, djnext guesses energy from tempo and how much of each track is drops.</p>
-        <button id="rerun-setup" class="ghost">Run the setup again</button>
-      </div>
-    </section>
-  </main>
-
-  <!-- ============ FIRST-RUN SETUP ============ -->
-  <div id="wizard" class="overlay hidden">
-    <div class="wiz">
-      <div class="wiz-dots"><span></span><span></span><span></span><span></span></div>
-
-      <div class="wiz-step" data-step="0">
-        <div class="wiz-em">💿</div>
-        <h1>Welcome to djnext</h1>
-        <p>djnext works with the tracks in your rekordbox Collection that rekordbox has analysed (downloaded files or streamed tracks). It puts the tracks in an order that flows, shows you <b>when</b> and <b>how</b> to mix each one, and can put the set straight into rekordbox with hot cues on your pads.</p>
-        <p id="wiz-lib" class="wiz-note">Looking for your rekordbox library…</p>
-        <div class="wiz-actions"><button class="primary big" data-next>Let's set it up (1 minute)</button></div>
-      </div>
-
-      <div class="wiz-step" data-step="1">
-        <div class="wiz-em">☁︎</div>
-        <h1>Your SoundCloud</h1>
-        <p>Link your SoundCloud so djnext knows your taste:</p>
-        <ol class="sc-steps">
-          <li><a class="btn-link" href="https://soundcloud.com/signin" target="_blank" rel="noopener">Open SoundCloud ↗</a> and sign in. It opens in your web browser.</li>
-          <li>Click your <b>profile picture</b> in the <b>top-right corner</b>, then click <b>Profile</b>.</li>
-          <li>Click the <b>address bar</b> at the top of the browser, press <b>⌘C</b> to copy the address, come back here and press <b>⌘V</b> to paste it below.</li>
-        </ol>
-        <p class="small muted">It looks like <code>https://soundcloud.com/your-name</code>. djnext reads your public likes and playlists (only the track lists, nothing is downloaded) and suggests <b>only those tracks that are also in your rekordbox Collection</b>. Skip this and djnext uses your whole rekordbox Collection instead.</p>
-        <input id="wiz-sc" placeholder="https://soundcloud.com/your-name">
-        <p id="wiz-sc-status" class="wiz-note"></p>
-        <div class="wiz-actions">
-          <button class="ghost" data-skip>I don't use SoundCloud</button>
-          <button class="primary" id="wiz-sc-go">Connect</button>
-        </div>
-      </div>
-
-      <div class="wiz-step" data-step="2">
-        <div class="wiz-em">🎶</div>
-        <h1>What do you play?</h1>
-        <p>Pick one. You can fine-tune it later in Settings.</p>
-        <div class="presets big" id="wiz-presets"></div>
-        <span class="label">Favourite artists <span class="muted">(optional, press Enter after each)</span></span>
-        <div class="tags" id="wiz-favs"></div>
-        <div class="wiz-actions"><button class="ghost" data-back>Back</button><button class="primary" data-next>Next</button></div>
-      </div>
-
-      <div class="wiz-step" data-step="3">
-        <div class="wiz-em">🎛️</div>
-        <h1>How experienced are you?</h1>
-        <div class="choice" id="wiz-skill">
-          <button data-v="beginner" class="on"><span class="em">🌱</span><b>Beginner</b><span>Simple, short mixes with BEAT SYNC</span></button>
-          <button data-v="advanced"><span class="em">🎛️</span><b>Advanced</b><span>Long blends, EQ work, loop rolls</span></button>
-        </div>
-        <div class="wiz-actions"><button class="ghost" data-back>Back</button><button class="primary big" id="wiz-done">Start making sets</button></div>
       </div>
     </div>
+    <div class="row" style="margin-top:14px">
+      <div>
+        <label class="f" for="start">Start with</label>
+        <select id="start"><option value="">Let djnext choose</option></select>
+      </div>
+      <button class="btn" id="makeBtn">Make playlist</button>
+    </div>
+    <div class="msg" id="makeMsg"></div>
+  </section>
+
+  <section class="card" id="result" hidden>
+    <ol id="steps"></ol>
+  </section>
+
+  <details id="more" hidden>
+    <summary id="moreSum">Your genre lists</summary>
+    <div class="card">
+      <div id="djline" class="sub"></div>
+      <div class="progress" id="prog" hidden><div></div></div>
+      <div class="row" style="margin-top:10px">
+        <button class="ghost" id="djBtn">Find DJ pairs</button>
+        <button class="ghost" id="resyncBtn">Update my likes</button>
+        <button class="ghost" id="genresBtn">Send genre lists to rekordbox</button>
+      </div>
+      <div class="msg" id="genresMsg"></div>
+      <div class="sub" id="countsLine" style="margin-top:10px"></div>
+      <div class="sub" style="margin-top:6px"><span class="guess">?</span> = a guess (few clues). Use the menu to move a track to the right list; djnext remembers.</div>
+      <div class="glist" id="pool"></div>
+      <div id="removedBox"></div>
+    </div>
+  </details>
+</main>
+
+<div class="bar" id="bar" hidden>
+  <div class="in">
+    <input type="text" id="plName" aria-label="Playlist name">
+    <button class="btn" id="sendBtn">Send to rekordbox with hot cues</button>
   </div>
+  <div class="in" style="padding-top:0"><span class="sub" id="sendNote"></span></div>
+</div>
 
-  <div id="spinning" class="overlay hidden">
-    <div class="deck">
-      <div class="platter"><div class="vinyl"><div class="label-c"></div></div><div class="arm"></div></div>
-      <p id="spin-msg">Digging through your crates…</p>
-    </div>
-  </div>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let S = null, PL = null, rbOpen = false;
+let GENRE = (() => { try { return localStorage.getItem("djnext-genre") || ""; } catch (e) { return ""; } })();
 
-  <div id="toasts" class="toasts"></div>
-  <script src="/static/app.js"></script>
+async function api(path, body) {
+  const r = await fetch(path, body === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.detail || `Something went wrong (${r.status})`);
+  return d;
+}
+function seg(id) { return $(id).querySelector(".on").dataset.v; }
+for (const id of ["len", "shape"]) $(id).addEventListener("click", e => {
+  if (e.target.tagName !== "BUTTON") return;
+  $(id).querySelectorAll("button").forEach(b => b.classList.toggle("on", b === e.target));
+});
+function msg(el, text, kind) { $(el).className = "msg " + (kind || ""); $(el).textContent = text || ""; }
+
+function renderStatus(s) {
+  S = s;
+  rbOpen = s.rekordbox_running;
+  if (!s.soundcloud) { $("setup").hidden = false; $("maker").hidden = true; $("more").hidden = true; $("sub").textContent = "First, tell djnext who you are on SoundCloud."; return; }
+  $("setup").hidden = true; $("maker").hidden = false; $("more").hidden = false;
+  const c = s.counts;
+  $("sub").textContent = `${s.pool} tracks from your SoundCloud likes, sorted into ${s.genres.filter(g => g.count).length} genre lists`;
+  if (!s.genres.some(g => g.id === GENRE && g.count >= 3)) GENRE = (s.genres.slice().sort((a, b) => b.count - a.count)[0] || {}).id || "";
+  renderGenres();
+  $("moreSum").textContent = `Your genre lists (${s.pool} tracks)`;
+  const L = s.lookup;
+  $("prog").hidden = !L.running;
+  if (L.running) {
+    $("prog").firstElementChild.style.width = `${Math.round(100 * L.done / Math.max(1, L.total))}%`;
+    $("djline").textContent = `Looking your tracks up in DJ tracklists… ${L.done} of ${L.total} (${L.current})`;
+  } else {
+    const left = s.pool - s.dj_checked;
+    $("djline").textContent = left > 0
+      ? `${left} track${left > 1 ? "s" : ""} not looked up in DJ tracklists yet. "Find DJ pairs" checks which of your tracks real DJs play together (about 15 seconds per track, only once).`
+      : `${s.dj_found} of ${s.pool} tracks found in real DJ sets · ${s.history_sessions} of your own rekordbox sessions used.` + (L.error ? ` ${L.error}` : "");
+  }
+  $("djBtn").disabled = L.running || s.pool - s.dj_checked <= 0;
+  $("countsLine").textContent = `From ${s.soundcloud.likes} likes: ${c.not_in_rekordbox} not in rekordbox yet, ${c.not_a_track} clips or DJ sets, ${c.duplicate} second uploads, ${c.removed} removed by you.`;
+  const opts = (sel) => s.genres.map(g => `<option value="${g.id}" ${g.id === sel ? "selected" : ""}>${esc(g.name)}</option>`).join("");
+  $("pool").innerHTML = s.genres.filter(g => g.count).map(g => `<h3>${esc(g.name)} <span>${g.count} tracks${g.guessed ? ` · ${g.guessed} guessed` : ""}</span></h3>` +
+    s.tracks.filter(t => t.genre === g.id).sort((a, b) => a.bpm - b.bpm).map(t => `<div class="prow"><span>${t.genre_sure ? "" : `<span class="guess" title="${esc(t.genre_why)}">?</span>`}${esc(t.artist)} – ${esc(t.title)} <span class="sub">${t.bpm} · ${t.key}${t.dj_sets ? ` · in ${t.dj_sets} DJ sets` : ""}</span></span><span style="white-space:nowrap"><select data-move="${t.id}" aria-label="Move to genre">${opts(t.genre)}</select> <button class="link" data-rm="${t.id}">Don't use</button></span></div>`).join("")).join("");
+  sendNote();
+  if (L.running) setTimeout(refresh, 3000);
+}
+
+function renderGenres() {
+  if (!S || !S.genres) return;
+  $("genre").innerHTML = S.genres.filter(g => g.count).map(g => `<button data-genre="${g.id}" class="${g.id === GENRE ? "on" : ""}" ${g.count < 3 ? "disabled" : ""}>${esc(g.name)}<span>${g.count}</span></button>`).join("");
+  const keep = $("start").value;
+  const inGenre = S.tracks.filter(t => t.genre === GENRE).sort((a, b) => a.bpm - b.bpm);
+  $("start").innerHTML = `<option value="">Let djnext choose</option>` + inGenre.map(t => `<option value="${t.id}">${esc(t.artist)} – ${esc(t.title)} (${t.bpm}, ${t.key})</option>`).join("");
+  $("start").value = inGenre.some(t => t.id === keep) ? keep : "";
+}
+
+function cueText(cues) {
+  if (!cues || !cues.length) return "";
+  return "Hot cues: " + cues.map(c => `<b>${c.slot}</b> ${esc(c.at)} ${esc(c.what.split(":")[0].split(" (")[0].split(" > ")[0])}`).join(" · ");
+}
+
+function renderPlaylist(p) {
+  PL = p;
+  const has = p.steps && p.steps.length;
+  $("result").hidden = !has; $("bar").hidden = !has;
+  if (!has) return;
+  if (!$("plName").dataset.touched || p.genre !== $("plName").dataset.genre) { $("plName").value = p.name; $("plName").dataset.genre = p.genre; delete $("plName").dataset.touched; }
+  $("steps").innerHTML = p.steps.map((s, i) => `
+    <li class="step" data-pos="${i}">
+      <div class="num">${i + 1}</div>
+      <div>
+        <div><span class="title">${esc(s.title)}</span> <span class="artist">· ${esc(s.artist)}</span></div>
+        <div class="tags"><span class="tag">${s.bpm} BPM</span><span class="tag">${esc(s.key)}</span>${s.known ? `<span class="tag known">crowd knows it</span>` : ""}${s.intro_bars != null ? `<span class="tag">${s.intro_bars}-bar intro</span>` : ""}</div>
+        <div class="why ${i === 0 ? "first" : ""}">${i === 0 ? "Opener" : esc(s.why).replace(/^⚠ hard mix:/, '<span class="warn">⚠ hard mix:</span>')}</div>
+        <div class="cues">${cueText(s.cues)}</div>
+      </div>
+      <div class="acts">${i > 0 ? `<button class="ghost" data-swap="${i}">Other options</button><button class="link" data-redo="${i}">Doesn't work after #${i}</button>` : ""}<button class="link" data-rm="${s.id}">Don't use</button></div>
+    </li>`).join("");
+}
+
+function sendNote() {
+  $("sendNote").textContent = rbOpen
+    ? "Quit rekordbox first (Cmd+Q). djnext backs up your library, then adds this playlist to a “djnext” folder."
+    : "Adds this playlist to a “djnext” folder in rekordbox, with hot cues E (cue in), F (swap the bass) and G (start the next track). A backup is made first.";
+  $("sendBtn").disabled = rbOpen;
+}
+
+async function refresh() { try { renderStatus(await api("/api/status")); } catch (e) { $("sub").textContent = e.message; } }
+
+$("syncBtn").onclick = async () => {
+  $("syncBtn").disabled = true; msg("setupMsg", "Reading your likes from SoundCloud… (about 20 seconds)");
+  try { renderStatus(await api("/api/soundcloud/sync", {user: $("scuser").value})); msg("setupMsg", ""); }
+  catch (e) { msg("setupMsg", e.message, "err"); }
+  $("syncBtn").disabled = false;
+};
+$("resyncBtn").onclick = async () => {
+  $("resyncBtn").disabled = true; $("countsLine").textContent = "Reading your likes from SoundCloud…";
+  try { renderStatus(await api("/api/soundcloud/sync", {user: ""})); } catch (e) { $("countsLine").textContent = e.message; }
+  $("resyncBtn").disabled = false;
+};
+$("djBtn").onclick = async () => { renderStatus(await api("/api/djsets", {})); };
+$("makeBtn").onclick = async () => {
+  $("makeBtn").disabled = true; msg("makeMsg", "");
+  try {
+    renderPlaylist(await api("/api/playlist", {genre: GENRE, length: +seg("len"), shape: seg("shape"), start_id: $("start").value || null}));
+    $("result").scrollIntoView({behavior: "smooth", block: "start"});
+  } catch (e) { msg("makeMsg", e.message, "err"); }
+  $("makeBtn").disabled = false;
+};
+$("plName").addEventListener("input", () => { $("plName").dataset.touched = "1"; });
+
+document.addEventListener("click", async (e) => {
+  const t = e.target;
+  const chip = t.closest("[data-genre]");
+  if (chip) { GENRE = chip.dataset.genre; try { localStorage.setItem("djnext-genre", GENRE); } catch (e) {} renderGenres(); return; }
+  try {
+    if (t.dataset.swap) {
+      const li = t.closest("li"); const open = li.querySelector(".opts");
+      if (open) { open.remove(); return; }
+      const d = await api("/api/playlist/options", {position: +t.dataset.swap});
+      const box = document.createElement("div"); box.className = "opts";
+      box.innerHTML = d.options.length ? d.options.map(o => `<div class="opt"><div><div><span class="title">${esc(o.title)}</span> <span class="artist">· ${esc(o.artist)}</span></div><div class="why">${esc(o.why)}</div></div><button class="ghost" data-use="${o.id}" data-at="${t.dataset.swap}">Use this</button></div>`).join("")
+        : `<div class="sub">Nothing else mixes well here.</div>`;
+      li.appendChild(box);
+    } else if (t.dataset.use) {
+      renderPlaylist(await api("/api/playlist/replace", {position: +t.dataset.at, track_id: t.dataset.use}));
+    } else if (t.dataset.redo) {
+      renderPlaylist(await api("/api/playlist/rebuild_from", {position: +t.dataset.redo}));
+    } else if (t.dataset.rm) {
+      const d = await api("/api/remove", {track_id: t.dataset.rm, out: true});
+      renderStatus(d.status); renderPlaylist(d.playlist); showRemoved();
+    } else if (t.dataset.back) {
+      const d = await api("/api/remove", {track_id: t.dataset.back, out: false});
+      renderStatus(d.status); showRemoved();
+    }
+  } catch (err) { msg("makeMsg", err.message, "err"); }
+});
+
+document.addEventListener("change", async (e) => {
+  const id = e.target.dataset.move;
+  if (!id) return;
+  try { renderStatus(await api("/api/genre", {track_id: id, genre: e.target.value})); } catch (err) { msg("genresMsg", err.message, "err"); }
+});
+
+$("genresBtn").onclick = async () => {
+  if (rbOpen) { msg("genresMsg", "Quit rekordbox first (Cmd+Q), then press the button again.", "warn"); return; }
+  $("genresBtn").disabled = true; msg("genresMsg", "Writing to rekordbox…");
+  try {
+    const d = await api("/api/send_genres", {});
+    msg("genresMsg", `Done: ${Object.entries(d.playlists).map(([n, c]) => `${n} (${c})`).join(", ")} are in rekordbox under Playlists → ${d.folder}. Sending again refreshes them.`, "ok");
+  } catch (err) { msg("genresMsg", err.message, "err"); }
+  $("genresBtn").disabled = false;
+};
+
+async function showRemoved() {
+  const d = await api("/api/removed");
+  $("removedBox").innerHTML = d.tracks.length ? `<div class="sub" style="margin-top:14px">Not used (${d.tracks.length})</div>` + d.tracks.map(t => `<div class="prow"><span class="sub">${esc(t.artist)} – ${esc(t.title)}</span><button class="link" data-back="${t.id}">Use again</button></div>`).join("") : "";
+}
+
+$("sendBtn").onclick = async () => {
+  $("sendBtn").disabled = true; $("sendNote").textContent = "Writing to rekordbox…";
+  try {
+    const d = await api("/api/send", {name: $("plName").value});
+    $("sendNote").innerHTML = `<span style="color:var(--good)">Done: “${esc(d.name)}” is in the ${esc(d.folder)} folder with ${d.tracks} tracks and ${d.cues} hot cues${d.cues_skipped ? ` (${d.cues_skipped} skipped: those pads were already used)` : ""}. Open rekordbox to play it.</span> <button class="link" id="undoBtn">Undo</button>`;
+    $("undoBtn").onclick = async () => {
+      if (!confirm("Put rekordbox back exactly as it was before this Send? Anything else you changed in rekordbox since then is lost too.")) return;
+      try { await api("/api/undo", {}); $("sendNote").textContent = "Undone: rekordbox is back as it was."; } catch (e) { $("sendNote").textContent = e.message; }
+    };
+  } catch (e) { $("sendNote").innerHTML = `<span style="color:var(--bad)">${esc(e.message)}</span>`; }
+  $("sendBtn").disabled = rbOpen;
+};
+
+setInterval(async () => { try { const r = await api("/api/rekordbox"); if (r.running !== rbOpen) { rbOpen = r.running; sendNote(); } } catch (e) {} }, 4000);
+refresh().then(async () => { const p = await api("/api/playlist"); if (p.steps.length) renderPlaylist(p); showRemoved(); });
+</script>
 </body>
 </html>

@@ -70,6 +70,14 @@ def load_rekordbox_db(db_dir: Optional[Path] = None) -> Library:
             ids = [str(s.ContentID) for s in songs if str(s.ContentID) in lib.tracks]
             if ids:
                 lib.playlists[pl.Name] = ids
+        try:  # what you actually played, session by session: pairs you've mixed before
+            for h in db.get_history().all():
+                songs = sorted(db.get_history_songs(HistoryID=h.ID).all(), key=lambda s: s.TrackNo or 0)
+                ids = [str(s.ContentID) for s in songs if str(s.ContentID) in lib.tracks]
+                if len(ids) > 1:
+                    lib.history.append(ids)
+        except Exception:  # an older database without history is fine
+            pass
         db.close()
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

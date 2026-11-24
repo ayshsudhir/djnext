@@ -42,7 +42,7 @@ def test_filter_fade_for_ok_keys_or_genre_change():
 
 
 def test_half_time_note():
-    adv = advise(T("a", 140, "8A", 6), T("b", 70, "8A", 6), CFG)
+    adv = advise(T("a", 140, "8A", 6), T("b", 70, "8A", 6), Config(skill="advanced", allow_half_double=True))
     assert "Half/double" in adv.steps[0]
 
 
@@ -65,5 +65,5 @@ def test_beginner_mode_is_simpler():
     assert "SMART FADER" in adv.alternative
     drop = advise(T("a", 124, "8A", 5), T("b", 126, "9A", 8), beg)
     assert drop.title.startswith("Swap on the drop") and not any("ROLL" in s for s in drop.steps)
-    half = advise(T("a", 140, "8A", 6), T("b", 70, "8A", 6), beg)
+    half = advise(T("a", 140, "8A", 6), T("b", 70, "8A", 6), Config(allow_half_double=True))
     assert any("Half/double" in n for n in half.notes)

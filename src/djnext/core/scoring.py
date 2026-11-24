@@ -1,10 +1,9 @@
-"""Cost of playing track B after track A at a given point in the set. Lower = better."""
+"""Small tempo/key/genre helpers used by the mix advice (how to mix A into B)."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import re
 from functools import lru_cache
-from typing import Dict, Optional, Sequence
+from typing import Optional
 
 from ..config import Config
 from .camelot import key_steps
@@ -64,76 +63,3 @@ def genre_cost(a: str, b: str) -> float:
     if set(a.replace("/", " ").split()) & set(b.replace("/", " ").split()):
         return 0.3  # e.g. "tech house" vs "house"
     return 1.0
-
-
-def energy_cost(energy: float, target: float) -> float:
-    return ((energy - target) / 2.0) ** 2  # 2 points off target = cost 1
-
-
-def direction_cost(prev_energy: float, energy: float, slope: float) -> float:
-    """Penalise moving against the curve: dropping while building, rising during a breather."""
-    delta = energy - prev_energy
-    if slope > 1.0 and delta < 0:
-        return -delta / 2.0
-    if slope < -1.0 and delta > 0:
-        return delta / 2.0
-    return 0.0
-
-
-@dataclass
-class Transition:
-    total: float
-    parts: Dict[str, float] = field(default_factory=dict)
-
-
-def transition(
-    prev: Optional[Track],
-    nxt: Track,
-    target: float,
-    slope: float,
-    recent: Sequence[Track],
-    cfg: Config,
-) -> Transition:
-    w = cfg.weights
-    e = nxt.energy if nxt.energy is not None else 5.0
-    parts = {"energy": w.energy * energy_cost(e, target)}
-    if prev is not None:
-        pe = prev.energy if prev.energy is not None else 5.0
-        parts["key"] = w.key * key_cost(prev.key, nxt.key)
-        parts["bpm"] = w.bpm * bpm_cost(prev.bpm, nxt.bpm, cfg)
-        parts["genre"] = w.genre * genre_cost(prev.genre, nxt.genre)
-        parts["direction"] = w.direction * direction_cost(pe, e, slope)
-    if prev is not None and cfg.pair_feedback:
-        verdict = cfg.pair_feedback.get(frozenset((prev.id, nxt.id)), 0)
-        if verdict < 0:
-            parts["your_rating"] = w.disliked_pair
-        elif verdict > 0:
-            parts["your_rating"] = -w.liked_pair
-    if nxt.mood_fit:
-        parts["mood"] = -w.mood_fit * nxt.mood_fit
-    if cfg.style.favourite_artists and cfg.style.is_favourite(nxt.artist, nxt.title):
-        parts["favourite"] = -cfg.style.favourite_bonus
-    if any(same_song(r, nxt) for r in recent):
-        parts["same_song"] = 25.0  # another edit of a song that's already in the set: never worth it
-    if nxt.artist:
-        window = list(recent)[-cfg.artist_gap:] if cfg.artist_gap > 0 else []
-        if any(r.artist.lower() == nxt.artist.lower() for r in window):
-            parts["artist"] = w.artist
-    return Transition(total=sum(parts.values()), parts=parts)
-
-
-def explain(prev: Optional[Track], nxt: Track, target: float, cfg: Config) -> str:
-    bits = []
-    if prev is not None:
-        if prev.key and nxt.key:
-            steps = key_steps(prev.key, nxt.key)
-            tag = "perfect" if steps == 0 else "harmonic" if steps == 1 else "ok" if steps == 2 else "clash"
-            bits.append(f"{prev.key}->{nxt.key} {tag}")
-        gap = bpm_gap(prev.bpm, nxt.bpm, cfg.allow_half_double)
-        if gap is not None:
-            sign = "+" if nxt.bpm >= prev.bpm else "-"
-            warn = "" if gap <= cfg.bpm_tolerance else " (beyond pitch range!)"
-            bits.append(f"{prev.bpm:.0f}->{nxt.bpm:.0f} BPM {sign}{gap * 100:.1f}%{warn}")
-    e = nxt.energy if nxt.energy is not None else 5.0
-    bits.append(f"energy {e:.0f} (target {target:.1f})")
-    return " | ".join(bits)
