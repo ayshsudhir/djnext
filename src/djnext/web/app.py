@@ -121,6 +121,7 @@ def status():
     if not data:
         return out
     lib, pool, ev = _load()
+    start_auto_refresh()
     c = STATE["counts"]
     store = mixesdb.Store.load()
     v = STATE["verdicts"]
@@ -181,6 +182,44 @@ def _lookup_worker(tracks) -> None:
     finally:
         LOOKUP.update(running=False, current="")
         _refresh_evidence()
+
+
+AUTO: dict = {"started": False}
+LIKES_MAX_AGE_H = 24
+
+
+def _auto_refresh() -> None:
+    """When djnext opens: fetch your likes again if they're over a day old, then look up new tracks in DJ
+    tracklists. All in the background, so nothing needs a button press."""
+    try:
+        data = sc.load()
+        if data and data.get("user"):
+            try:
+                age_h = (datetime.now() - datetime.fromisoformat(data.get("synced_at", ""))).total_seconds() / 3600
+            except ValueError:
+                age_h = LIKES_MAX_AGE_H + 1
+            if age_h > LIKES_MAX_AGE_H:
+                LOOKUP.update(current="Updating your likes from SoundCloud…")
+                fresh = sc.fetch(data["user"], log=lambda *_: None)
+                fresh["playlists"] = {}
+                if fresh.get("likes"):  # a failed or empty read never wipes your list
+                    sc.save(fresh)
+                    _load(reload=True)
+                LOOKUP.update(current="")
+    except Exception as e:  # offline etc.: carry on with what we have
+        LOOKUP.update(current="", error=f"Couldn't update your likes: {type(e).__name__}")
+    _, pool, _ = _load()
+    todo = mixesdb.Store.load().todo(pool)
+    if todo and not LOOKUP["running"]:
+        LOOKUP.update(running=True, done=0, total=len(todo), error="")
+        _lookup_worker(todo)
+
+
+def start_auto_refresh() -> None:
+    if AUTO["started"] or not sc.load():
+        return
+    AUTO["started"] = True
+    threading.Thread(target=_auto_refresh, daemon=True).start()
 
 
 @app.post("/api/djsets")
@@ -375,6 +414,38 @@ def undo():
     except RekordboxRunning:
         raise HTTPException(409, "rekordbox is open. Quit rekordbox (Cmd+Q), then press Undo again.")
     return {"restored": backups[0].name}
+
+
+@app.get("/api/update")
+def update_check():
+    """Is there a newer djnext? (asks GitHub; offline = no)"""
+    from .. import updater
+
+    return updater.check()
+
+
+@app.post("/api/update")
+def update_install():
+    """Install the newest version. The Mac app quits and reopens itself; from the code, restart djnext after."""
+    import os
+
+    from .. import updater
+
+    info = updater.check()
+    if not info["newer"]:
+        raise HTTPException(400, "You already have the newest djnext." if info["latest"] else
+                            info.get("error") or "Couldn't check for updates.")
+    how = updater.how()
+    try:
+        if how == "app":
+            updater.install_app(info["url"], quit_app=lambda: threading.Timer(1.0, lambda: os._exit(0)).start())
+            return {"done": "restarting", "version": info["latest"]}
+        if how == "source":
+            updater.update_source()
+            return {"done": "restart", "version": info["latest"]}
+    except Exception as e:
+        raise HTTPException(400, f"The update didn't work: {e}. Your djnext wasn't changed.")
+    return {"done": "manual", "version": info["latest"], "page": info.get("page", "")}
 
 
 def serve(port: int = 8765, open_browser: bool = True) -> None:

@@ -125,7 +125,7 @@ pytest
 [config.yaml](config.yaml) only holds the mix-point settings: play time per track, overlap, tempo range and beginner/advanced blends.
 
 ### Building the Mac app
-`packaging/mac/build_app.sh` builds **djnext.app** (its own window, Python included) and a drag-to-Applications **.dmg** in `dist/`. It needs Python 3.10+ (`brew install python@3.12`). The app keeps its data in `~/Library/Application Support/djnext` and its log in `~/Library/Logs/djnext.log`. It's signed ad hoc (free), so friends click **Open Anyway** once in System Settings → Privacy & Security. Publish it with `gh release create v0.3.0 dist/djnext.dmg`. Keep the file name `djnext.dmg`: the download link at the top of this page always fetches the newest release's `djnext.dmg`.
+`packaging/mac/build_app.sh` builds **djnext.app** (its own window, Python included) and a drag-to-Applications **.dmg** in `dist/`. It needs Python 3.10+ (`brew install python@3.12`). The app keeps its data in `~/Library/Application Support/djnext` and its log in `~/Library/Logs/djnext.log`. It's signed ad hoc (free), so friends click **Open Anyway** once in System Settings → Privacy & Security. Publish it with `gh release create vX.Y.Z dist/djnext.dmg`: the app's **Update now** button (`src/djnext/updater.py`) installs the newest release's `djnext.dmg`. Keep the file name `djnext.dmg`: the download link at the top of this page always fetches the newest release's `djnext.dmg`.
 
 ### Disclaimer and licence
 See the [disclaimer](https://github.com/ayshsudhir/djnext/blob/main/FRIENDS.md#disclaimer). MIT licence: see [LICENSE](LICENSE).

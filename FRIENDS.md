@@ -52,7 +52,8 @@ For every "this track, then that one" djnext checks, in this order:
 - **Anything else:** [ask a question here](https://github.com/ayshsudhir/djnext/issues/new), or send a screenshot to whoever shared djnext with you. Mac app: `~/Library/Logs/djnext.log` helps (Finder: ⇧⌘G and paste that path).
 
 ## Updating and removing
-- **Getting an update:** Mac app: [download the newest version](https://github.com/ayshsudhir/djnext/releases/latest/download/djnext.dmg) and drag djnext into Applications again (choose **Replace**). ZIP version: [download the ZIP again](https://github.com/ayshsudhir/djnext/archive/refs/heads/main.zip) and replace the old folder, but **keep your old `data` folder**.
+- **Getting an update:** djnext checks for a new version each time it opens. When there is one, a green bar says so: press **Update now**. djnext downloads it, closes and opens again by itself (about a minute); your lists and settings stay. You can also press **Check for updates** at the bottom of the page. (ZIP version: **Update now** fetches the newest code; then close djnext and open it again.)
+- **Stays up to date by itself:** each time djnext opens, it fetches your SoundCloud likes again (if the last time was over a day ago) and looks up new tracks in DJ tracklists in the background.
 - **Where your data is:** Mac app: `~/Library/Application Support/djnext`. ZIP version: the `data` folder. It holds your SoundCloud likes list, the DJ-tracklist cache, your genre choices, the tracks you said not to use, and backups. Updating never touches it.
 - **Removing djnext:** Mac app: drag it from Applications to the Bin, and delete that `djnext` folder. ZIP version: delete the folder.
 

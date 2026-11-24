@@ -68,6 +68,10 @@
   .prow { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 13.5px; align-items: center; }
   .progress { height: 4px; background: var(--line); border-radius: 2px; margin-top: 8px; overflow: hidden; }
   .progress div { height: 100%; background: var(--accent); transition: width .4s; }
+  .update { background: #1d2410; border: 1px solid #3c4d17; border-radius: 12px; padding: 12px 14px; margin-top: 14px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .update b { color: var(--accent); }
+  .update .grow { flex: 1 1 220px; }
+  .ver { color: var(--dim); font-size: 12px; margin-top: 28px; text-align: center; }
   .empty { color: var(--dim); text-align: center; padding: 26px 0 10px; }
   @media (max-width: 560px) {
     select { width: 100%; }
@@ -82,6 +86,10 @@
 <main>
   <h1>dj<span>next</span></h1>
   <div class="sub" id="sub">Loading your likes…</div>
+  <div class="update" id="update" hidden>
+    <div class="grow"><b id="updTitle"></b><div class="sub" id="updNote"></div></div>
+    <button class="btn" id="updBtn">Update now</button>
+  </div>
 
   <!-- first time: who are you on SoundCloud -->
   <section class="card" id="setup" hidden>
@@ -143,6 +151,7 @@
       <div id="removedBox"></div>
     </div>
   </details>
+  <div class="ver"><span id="verText"></span> · <button class="link" id="checkBtn">Check for updates</button></div>
 </main>
 
 <div class="bar" id="bar" hidden>
@@ -187,6 +196,9 @@ function renderStatus(s) {
   if (L.running) {
     $("prog").firstElementChild.style.width = `${Math.round(100 * L.done / Math.max(1, L.total))}%`;
     $("djline").textContent = `Looking your tracks up in DJ tracklists… ${L.done} of ${L.total} (${L.current})`;
+  } else if (L.current) {
+    $("djline").textContent = L.current;
+    setTimeout(refresh, 3000);
   } else {
     const left = s.pool - s.dj_checked;
     $("djline").textContent = left > 0
@@ -326,6 +338,36 @@ $("sendBtn").onclick = async () => {
   } catch (e) { $("sendNote").innerHTML = `<span style="color:var(--bad)">${esc(e.message)}</span>`; }
   $("sendBtn").disabled = rbOpen;
 };
+
+async function checkUpdate(manual) {
+  try {
+    const u = await api("/api/update");
+    $("verText").textContent = `djnext ${u.current}`;
+    if (u.newer) {
+      $("update").hidden = false;
+      $("updTitle").textContent = `djnext ${u.latest} is ready`;
+      $("updNote").textContent = u.how === "app" ? "Press Update now: djnext downloads it, closes and opens again (about a minute). Your lists and settings stay."
+        : u.how === "source" ? "Press Update now to get the newest code, then close djnext and open it again."
+        : "Download the newest version from the djnext page.";
+      $("updBtn").hidden = false;
+    } else if (manual) {
+      $("update").hidden = false; $("updBtn").hidden = true;
+      $("updTitle").textContent = u.latest ? "You have the newest djnext." : "Couldn't check for updates.";
+      $("updNote").textContent = u.error || "";
+    }
+  } catch (e) { if (manual) { $("update").hidden = false; $("updBtn").hidden = true; $("updTitle").textContent = e.message; } }
+}
+$("checkBtn").onclick = () => checkUpdate(true);
+$("updBtn").onclick = async () => {
+  $("updBtn").disabled = true; $("updNote").textContent = "Downloading the new version…";
+  try {
+    const d = await api("/api/update", {});
+    if (d.done === "restarting") $("updNote").textContent = `Installing djnext ${d.version}… djnext closes and opens again by itself.`;
+    else if (d.done === "restart") { $("updNote").textContent = `Updated to ${d.version}. Close djnext and open it again.`; $("updBtn").hidden = true; }
+    else { $("updNote").innerHTML = `Download it from <a href="${esc(d.page)}" target="_blank" style="color:var(--accent)">the djnext page</a>.`; $("updBtn").hidden = true; }
+  } catch (e) { $("updNote").textContent = e.message; $("updBtn").disabled = false; }
+};
+checkUpdate(false);
 
 setInterval(async () => { try { const r = await api("/api/rekordbox"); if (r.running !== rbOpen) { rbOpen = r.running; sendNote(); } } catch (e) {} }, 4000);
 refresh().then(async () => { const p = await api("/api/playlist"); if (p.steps.length) renderPlaylist(p); showRemoved(); });

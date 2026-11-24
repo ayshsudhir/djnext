@@ -18,6 +18,7 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setattr(webapp, "_running", lambda: False)
     webapp.STATE.update(lib=None, pool=None, counts=None, ev=None, verdicts=None, playlist=None, genre=None)
     webapp.LOOKUP.update(running=False, done=0, total=0, current="", error="")
+    webapp.AUTO["started"] = True  # no real SoundCloud / MixesDB calls from the tests
     return TestClient(webapp.app)
 
 
@@ -162,3 +163,30 @@ def test_unexpected_errors_explain_themselves(client, monkeypatch):
     monkeypatch.setattr(rp, "write_playlist", boom)
     r = TestClient(webapp.app, raise_server_exceptions=False).post("/api/send", json={})
     assert r.status_code == 500 and "was not changed" in r.json()["detail"]
+
+
+def test_auto_refresh_updates_old_likes_then_looks_up(client, monkeypatch):
+    data = soundcloud_data()
+    data["synced_at"] = "2020-01-01T00:00:00"
+    saved, looked = [], []
+    monkeypatch.setattr(webapp.sc, "load", lambda *a, **k: data)
+    monkeypatch.setattr(webapp.sc, "fetch", lambda user, log=None: {**soundcloud_data(), "user": user})
+    monkeypatch.setattr(webapp.sc, "save", lambda d: saved.append(d))
+    monkeypatch.setattr(mixesdb, "update", lambda tracks, progress=None: looked.append(len(tracks)))
+    webapp._auto_refresh()
+    assert saved and saved[0]["user"] == "me" and saved[0]["playlists"] == {}
+    assert looked == [12] and webapp.LOOKUP["running"] is False
+
+
+def test_update_endpoints(client, monkeypatch):
+    from djnext import updater
+
+    monkeypatch.setattr(updater, "check", lambda: {"current": "0.3.0", "latest": "0.3.0", "newer": False,
+                                                   "notes": "", "url": "", "how": "source"})
+    assert client.get("/api/update").json()["newer"] is False
+    assert client.post("/api/update", json={}).status_code == 400  # nothing newer
+    monkeypatch.setattr(updater, "check", lambda: {"current": "0.3.0", "latest": "0.3.1", "newer": True,
+                                                   "notes": "", "url": "u", "how": "source"})
+    monkeypatch.setattr(updater, "how", lambda: "source")
+    monkeypatch.setattr(updater, "update_source", lambda: "restart")
+    assert client.post("/api/update", json={}).json() == {"done": "restart", "version": "0.3.1"}
