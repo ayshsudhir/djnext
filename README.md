@@ -4,7 +4,7 @@
 
 - 🎯 **Only your likes:** it never suggests a track you haven't liked on SoundCloud.
 - 🗂️ **Genre lists:** your likes sorted by the genres of the DJ sets they're played in, their tags and tempo. Move any track yourself, and send the lists to rekordbox as playlists.
-- 🔗 **Tested pairs first:** tracks real DJs have played back to back (from public DJ tracklists) and pairs you've mixed before (your rekordbox history) come first.
+- 🔗 **Tested pairs first:** tracks professional DJs have played back to back (from public DJ tracklists) come first. Your own past sets are not used.
 - 🎚️ **Smooth flow:** tempo within 5%, compatible keys, long intros to blend over, never the same artist twice in a row.
 - 💿 **Straight into rekordbox:** one button adds the playlist with hot cues on your pads: where to cue in, where to swap the bass, when to start the next track.
 
@@ -112,12 +112,12 @@ pytest
 ```
 
 ### How it works
-- **Library:** rekordbox's own database, read from a temporary **copy** (the real one is only written when you press Send, with rekordbox closed and a backup first). That gives tempo, key, phrase analysis and your play history.
+- **Library:** rekordbox's own database, read from a temporary **copy** (the real one is only written when you press Send, with rekordbox closed and a backup first). That gives tempo, key and phrase analysis (your play history is not used).
 - **Your likes:** read from your public SoundCloud likes page with yt-dlp (track list only) and matched to rekordbox's streamed SoundCloud tracks by id (`src/djnext/ingest/soundcloud.py`).
 - **The pool:** likes that are analysed and are real tracks (2–15 min), one upload per song (`core/picker.py: pool`).
 - **Genre lists:** `core/genres.py` adds up three clues: the MixesDB categories of the DJ sets a track was found in (Tech House, Techno, Deep House…, fetched 50 sets per request), the genre tag, and the tempo. Low-confidence tracks then follow their artist's or label's confident tracks. Your manual moves are saved in `data/settings.json` and always win.
 - **DJ pairs:** each track is searched on [MixesDB](https://www.mixesdb.com)'s public API, and the tracklists that contain it are cached in `data/mixesdb.json` (`ingest/mixesdb.py`). A line only counts as the same track when the title **and** an artist or remixer match (`core/names.py`). That way "Cloonee - XTC" isn't confused with "Dan Molinari - XTC".
-- **One move (A → B):** `core/picker.py: move` scores tempo, key, DJ back-to-back pairs, your own history, same-set and same-scene links, and intro length, and keeps a short list of reasons for the screen. `mixable` is the hard gate: within 5% tempo and at most one Camelot step.
+- **One move (A → B):** `core/picker.py: move` scores tempo, key, DJ back-to-back pairs, same-set and same-scene links, and intro length, and keeps a short list of reasons for the screen. `mixable` is the hard gate: within 5% tempo and at most one Camelot step.
 - **The playlist:** a beam search over moves (`build`) plus flow rules: an energy shape, tempo that climbs rather than saw-tooths, no shared artist or remixer back to back, and a balance of well-known and deeper tracks.
 - **Hot cues:** `core/mix_points.py` lines up B's drop with a phrase change in A, using rekordbox's phrase analysis. `export/rekordbox_cues.py` writes them as hot cues E, F and G (never over your own cues).
 

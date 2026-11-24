@@ -119,7 +119,7 @@ def send_genre_lists(lists: Dict[str, List[Track]]) -> dict:
 def evidence(lib: Library, pool: List[Track]) -> picker.Evidence:
     dj = mixesdb.pairs(pool, mixesdb.Store.load())
     blocked = [tuple(p) for p in read_settings().get("blocked_pairs") or []]
-    return picker.Evidence.build(dj, lib.history, blocked)
+    return picker.Evidence.build(dj, blocked)
 
 
 def block_pair(a_id: str, b_id: str) -> None:

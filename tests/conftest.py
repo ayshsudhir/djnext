@@ -46,7 +46,6 @@ def fake_library() -> Library:
         t.structure = structure(t.bpm, LONG_INTRO if t.id != "7" else SHORT_INTRO)
     lib = Library(tracks=tracks)
     lib.playlists["sc:likes"] = [t.id for t in LIKED]
-    lib.history = [["4", "1", "3"]]  # you once played Diet Coke -> Smack Yo' -> Freaky 1
     return lib
 
 

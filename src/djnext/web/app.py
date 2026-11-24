@@ -133,7 +133,6 @@ def status():
         "counts": {**c, "in_rekordbox": c["likes"], "not_in_rekordbox": max(0, len(data.get("likes", [])) - c["likes"])},
         "dj_checked": sum(1 for t in pool if t.id in store.tracks),
         "dj_found": sum(1 for t in pool if store.tracks.get(t.id, {}).get("sets")),
-        "history_sessions": len(lib.history),
         "tracks": sorted((_track(t, ev) for t in pool), key=lambda d: d["label"].lower()),
     })
     return out

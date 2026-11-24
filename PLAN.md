@@ -11,8 +11,9 @@ send it to rekordbox with hot cues.**
   house, indie dance & melodic, hard & fast, other) from MixesDB set categories + tags + tempo; you can move any track.
   A playlist comes from one genre list. The lists can also be sent to rekordbox ("djnext genres" folder).
 - Hard rules: tempo within 5%, at most one Camelot step, never the same artist or remixer back to back.
-- What makes a pick good, strongest first: real DJs played the pair back to back (MixesDB tracklists), you mixed it
-  before (rekordbox history), same DJ sets / same scene, a long intro, small climbing tempo steps, energy shape.
+- What makes a pick good, strongest first: pro DJs played the pair back to back (MixesDB tracklists), same DJ sets /
+  same scene, a long intro, small climbing tempo steps, energy shape. The user's own rekordbox history is deliberately
+  NOT used (removed 2026-11-24: they're a beginner, so their past choices aren't evidence of a good pair).
 - No audio analysis (too slow and heavy for this Mac); "groove" comes from which tracks DJs play together.
 - 1001tracklists has the best data but blocks bots, so it isn't used. YouTube set videos rarely carry tracklists.
 

@@ -41,7 +41,7 @@ Your hot cue pads are set up for each change: **E** = cue the incoming track her
 ## How it picks
 For every "this track, then that one" djnext checks, in this order:
 1. **Can it be mixed smoothly?** Tempo within 5% and a compatible key (same key, one step on the Camelot wheel, or the relative major/minor). Anything else is never picked.
-2. **Has it been tested?** Real DJs played them back to back (MixesDB tracklists), or you did (your rekordbox history).
+2. **Has it been tested?** Professional DJs played them back to back (MixesDB tracklists). What you played before is never used.
 3. **Same groove?** The two tracks turn up in the same DJ sets, or DJs who play one also play the other's artist.
 4. **Clean blend?** A long intro to lay over the outro is preferred (from rekordbox's phrase analysis).
 5. **Does it keep the flow?** Small tempo steps that climb rather than jump around, energy following the shape you picked, never the same artist (or remixer) twice in a row, and a mix of tunes the crowd knows and deeper cuts.

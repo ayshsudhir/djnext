@@ -215,7 +215,7 @@ function renderStatus(s) {
     const left = s.pool - s.dj_checked;
     $("djline").textContent = left > 0
       ? `${left} track${left > 1 ? "s" : ""} not looked up in DJ tracklists yet. "Find DJ pairs" checks which of your tracks real DJs play together (about 15 seconds per track, only once).`
-      : `${s.dj_found} of ${s.pool} tracks found in real DJ sets · ${s.history_sessions} of your own rekordbox sessions used.` + (L.error ? ` ${L.error}` : "");
+      : `${s.dj_found} of ${s.pool} tracks found in real DJ sets.` + (L.error ? ` ${L.error}` : "");
   }
   $("djBtn").disabled = L.running || s.pool - s.dj_checked <= 0;
   $("countsLine").textContent = `From ${s.soundcloud.likes} likes: ${c.not_in_rekordbox} not in rekordbox yet, ${c.not_a_track} clips or DJ sets, ${c.duplicate} second uploads, ${c.removed} removed by you.`;

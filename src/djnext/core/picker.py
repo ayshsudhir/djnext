@@ -3,7 +3,8 @@
 For every possible 'A then B' djnext checks, in this order:
   1. Can it be mixed at all?  Tempo within 6% (no half/double-time tricks) and a compatible key
      (same, one step on the Camelot wheel, or the relative major/minor). Anything else is never picked.
-  2. Has it been tested?  Real DJs played B straight after A (MixesDB tracklists), or you did (rekordbox history).
+  2. Has it been tested?  Real DJs played B straight after A (MixesDB tracklists of professional DJ sets).
+     (Your own past sets are deliberately NOT used: only what pro DJs do and the music itself count.)
   3. Same groove?  The two tracks turn up in the same DJ sets, or DJs who play A also play B's artist.
   4. Will the blend be clean?  B has a long intro to lay over A's outro (rekordbox phrase analysis).
   5. Does it keep the flow?  Small tempo steps, energy building the way the playlist should,
@@ -36,27 +37,14 @@ class Evidence:
     dj_same_set: Dict[frozenset, int] = field(default_factory=dict)
     artist_affinity: Dict[Tuple[str, str], float] = field(default_factory=dict)
     dj_plays: Dict[str, int] = field(default_factory=dict)  # track id -> DJ sets it was found in
-    mine_direct: Dict[Tuple[str, str], int] = field(default_factory=dict)  # (a, b): you played a then b
-    mine_same: Dict[frozenset, int] = field(default_factory=dict)
     blocked: Set[Tuple[str, str]] = field(default_factory=set)  # transitions you said don't work
 
     @classmethod
-    def build(cls, dj=None, history: Sequence[Sequence[str]] = (), blocked: Iterable[Tuple[str, str]] = ()):
+    def build(cls, dj=None, blocked: Iterable[Tuple[str, str]] = ()):
         ev = cls(blocked=set(map(tuple, blocked)))
         if dj is not None:
             ev.dj_direct, ev.dj_near, ev.dj_same_set = dict(dj.direct), dict(dj.near), dict(dj.same_set)
             ev.artist_affinity, ev.dj_plays = dict(dj.artist_affinity), dict(dj.plays)
-        direct: Dict[Tuple[str, str], int] = defaultdict(int)
-        same: Dict[frozenset, int] = defaultdict(int)
-        for session in history:
-            for a, b in zip(session, session[1:]):
-                if a != b:
-                    direct[(a, b)] += 1
-            uniq = list(dict.fromkeys(session))
-            for i, a in enumerate(uniq):
-                for b in uniq[i + 1:]:
-                    same[frozenset((a, b))] += 1
-        ev.mine_direct, ev.mine_same = dict(direct), dict(same)
         return ev
 
 
@@ -177,17 +165,10 @@ def move(a: Track, b: Track, ev: Evidence) -> Move:
     near, same = ev.dj_near.get(pair, 0), ev.dj_same_set.get(pair, 0)
     if near and not (n or back):
         parts["dj_near"] = 1.2 * math.log2(1 + near)
-        tested.append((parts["dj_near"], f"played close together in {_times(near)} DJ set{'s' if near > 1 else ''}"))
+        tested.append((parts["dj_near"], f"DJs played these close together in {near} set{'s' if near > 1 else ''}"))
     elif same and not (n or back):
         parts["dj_same_set"] = 0.6 * math.log2(1 + same)
-        tested.append((parts["dj_same_set"], f"in the same DJ set{'s' if same > 1 else ''} {_times(same)}"))
-    mine = ev.mine_direct.get((a.id, b.id), 0) + ev.mine_direct.get((b.id, a.id), 0)
-    if mine:
-        parts["you_mixed"] = 2.5 * math.log2(1 + mine)
-        tested.append((parts["you_mixed"], f"you've mixed these before ({_times(mine)})"))
-    elif ev.mine_same.get(pair):
-        parts["you_same_session"] = 0.4
-        tested.append((0.4, "you've played both in one session"))
+        tested.append((parts["dj_same_set"], f"in the same DJ set{'s' if same > 1 else ''} ({same})"))
     aff = (ev.artist_affinity.get((a.id, b.id), 0.0) + ev.artist_affinity.get((b.id, a.id), 0.0)) / 2
     if aff > 0:
         parts["same_scene"] = 1.5 * aff

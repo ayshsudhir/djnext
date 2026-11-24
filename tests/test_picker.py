@@ -33,13 +33,11 @@ def test_tested_pairs_win():
     a, b, c = lib.tracks["1"], lib.tracks["2"], lib.tracks["10"]  # By Myself and Whatchagonnado mix equally well
     plain = picker.Evidence.build()
     assert abs(picker.move(a, b, plain).score - picker.move(a, c, plain).score) < 0.5
-    ev = picker.Evidence.build(history=[])
+    ev = picker.Evidence.build()
     ev.dj_direct = {("1", "2"): 2}
     m = picker.move(a, b, ev)
     assert m.score > picker.move(a, c, ev).score + 2
     assert m.reasons[0] == "real DJs played it straight after this twice"
-    mine = picker.Evidence.build(history=[["1", "10"]])
-    assert "you've mixed these before (once)" in picker.move(a, c, mine).why
 
 
 def test_long_intros_are_preferred():
@@ -54,7 +52,7 @@ def test_long_intros_are_preferred():
 
 def test_playlist_flows():
     lib, (pool, _) = _pool()
-    ev = picker.Evidence.build(history=lib.history)
+    ev = picker.Evidence.build()
     pl = picker.build(pool, ev, length=8)
     ids = [t.id for t in pl.tracks]
     assert len(ids) == 8 and len(set(ids)) == 8
@@ -99,3 +97,11 @@ def test_options_never_repeat_the_artist_before():
     beltran = lib.tracks["1"]  # Smack Yo' (Beltran); The Final Chapter (7) is Beltran too
     alts = picker.alternatives(beltran, None, pool, picker.Evidence.build(), used={"1"}, top=20)
     assert "7" not in {m.track.id for m in alts}
+
+
+def test_your_own_past_sets_are_not_a_factor():
+    """Only pro DJ sets and the music count: the user's own rekordbox history must not change a pick."""
+    import inspect
+
+    assert "history" not in inspect.signature(picker.Evidence.build).parameters
+    assert not hasattr(fake_library(), "history")

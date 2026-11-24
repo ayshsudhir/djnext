@@ -37,7 +37,7 @@ def test_status_shows_your_likes_in_genre_lists(client):
     genre = {t["id"]: t["genre"] for t in s["tracks"]}
     assert genre["1"] == "tech-house" and genre["11"] == "other" and genre["12"] == "hard-fast"
     assert {g["id"]: g["count"] for g in s["genres"]}["tech-house"] >= 6
-    assert s["history_sessions"] == 1 and s["dj_checked"] == 0
+    assert s["dj_checked"] == 0 and "history_sessions" not in s
 
 
 def test_move_a_track_to_another_genre(client):
