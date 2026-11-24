@@ -86,6 +86,14 @@
 <main>
   <h1>dj<span>next</span></h1>
   <div class="sub" id="sub">Loading your likes…</div>
+  <div class="update" id="missing" hidden style="background:#2a2110;border-color:#5a4416">
+    <div class="grow"><b id="missTitle" style="color:var(--warn)"></b>
+      <div class="sub">In rekordbox: open <b>SoundCloud → Likes</b> in the left sidebar, press <b>⌘A</b> and drag them onto <b>Collection</b>. Then press Reload here.
+        <button class="link" id="missShow">Show which</button></div>
+      <div id="missList" class="sub" hidden style="margin-top:6px"></div>
+    </div>
+    <button class="ghost" id="missReload">Reload</button>
+  </div>
   <div class="update" id="update" hidden>
     <div class="grow"><b id="updTitle"></b><div class="sub" id="updNote"></div></div>
     <button class="btn" id="updBtn">Update now</button>
@@ -186,6 +194,9 @@ function renderStatus(s) {
   rbOpen = s.rekordbox_running;
   if (!s.soundcloud) { $("setup").hidden = false; $("maker").hidden = true; $("more").hidden = true; $("sub").textContent = "First, tell djnext who you are on SoundCloud."; return; }
   $("setup").hidden = true; $("maker").hidden = false; $("more").hidden = false;
+  const miss = s.counts ? s.counts.not_in_rekordbox : 0;
+  $("missing").hidden = !miss;
+  if (miss) $("missTitle").textContent = `${miss} of your likes ${miss === 1 ? "isn't" : "aren't"} in rekordbox yet, so djnext can't use ${miss === 1 ? "it" : "them"}`;
   const c = s.counts;
   $("sub").textContent = `${s.pool} tracks from your SoundCloud likes, sorted into ${s.genres.filter(g => g.count).length} genre lists`;
   if (!s.genres.some(g => g.id === GENRE && g.count >= 3)) GENRE = (s.genres.slice().sort((a, b) => b.count - a.count)[0] || {}).id || "";
@@ -358,6 +369,18 @@ async function checkUpdate(manual) {
   } catch (e) { if (manual) { $("update").hidden = false; $("updBtn").hidden = true; $("updTitle").textContent = e.message; } }
 }
 $("checkBtn").onclick = () => checkUpdate(true);
+$("missShow").onclick = async () => {
+  const box = $("missList");
+  if (!box.hidden) { box.hidden = true; return; }
+  const d = await api("/api/missing");
+  box.innerHTML = d.tracks.map(t => t.url ? `<div><a href="${esc(t.url)}" target="_blank" style="color:var(--dim)">${esc(t.label)}</a></div>` : `<div>${esc(t.label)}</div>`).join("");
+  box.hidden = false;
+};
+$("missReload").onclick = async () => {
+  $("missReload").disabled = true; $("missTitle").textContent = "Reading rekordbox again…";
+  try { renderStatus(await api("/api/reload", {})); $("missList").hidden = true; } catch (e) { $("missTitle").textContent = e.message; }
+  $("missReload").disabled = false;
+};
 $("updBtn").onclick = async () => {
   $("updBtn").disabled = true; $("updNote").textContent = "Downloading the new version…";
   try {

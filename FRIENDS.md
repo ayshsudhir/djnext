@@ -8,7 +8,7 @@ djnext sorts **your SoundCloud likes** into genre lists, then picks a playlist f
 
 ## First time
 1. Paste **your SoundCloud profile link** and press **Get my likes**. Find the link on SoundCloud: click your profile picture → **Profile**, then copy the address from the address bar, for example `https://soundcloud.com/your-name`. Your likes must be public.
-2. Make sure your liked tracks are **analysed in rekordbox**: in rekordbox, open **SoundCloud → Likes** in the left sidebar, select the tracks (⌘A) and drag them onto **Collection**. djnext needs rekordbox's tempo, key and phrase analysis, so a liked track that isn't in your Collection can't be picked. After adding more, press **Update my likes** in djnext.
+2. Make sure your liked tracks are **analysed in rekordbox**: in rekordbox, open **SoundCloud → Likes** in the left sidebar, select the tracks (⌘A) and drag them onto **Collection**. djnext needs rekordbox's tempo, key and phrase analysis, so a liked track that isn't in your Collection can't be picked. Whenever you like new tracks on SoundCloud, djnext shows a yellow bar saying how many aren't in rekordbox yet (with **Show which**); do the same drag, then press **Reload** in that bar.
 3. Open **Your genre lists** at the bottom and press **Find DJ pairs**. djnext looks each of your tracks up in DJ tracklists on [MixesDB](https://www.mixesdb.com) to learn which of them real DJs play together, and which genre those DJ sets are. It takes about 15 seconds per track, only once; you can keep using djnext meanwhile.
 
 ## Genre lists

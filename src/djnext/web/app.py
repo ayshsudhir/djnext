@@ -166,6 +166,17 @@ def soundcloud_sync(body: SyncIn):
     return status()
 
 
+@app.get("/api/missing")
+def missing():
+    """Likes rekordbox doesn't know yet (never loaded or added to its Collection), so djnext can't use them."""
+    data = sc.load()
+    if not data:
+        return {"tracks": []}
+    lib, _, _ = _load()
+    res = sc.attach(lib, {"likes": data.get("likes", []), "playlists": {}})
+    return {"tracks": [{"label": sc.label(e), "url": e.get("url", "")} for e in res.not_analysed]}
+
+
 @app.post("/api/reload")
 def reload():
     _load(reload=True)

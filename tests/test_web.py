@@ -190,3 +190,11 @@ def test_update_endpoints(client, monkeypatch):
     monkeypatch.setattr(updater, "how", lambda: "source")
     monkeypatch.setattr(updater, "update_source", lambda: "restart")
     assert client.post("/api/update", json={}).json() == {"done": "restart", "version": "0.3.1"}
+
+
+def test_likes_missing_from_rekordbox(client, monkeypatch):
+    data = soundcloud_data()
+    data["likes"].append({"id": "999", "title": "Brand new like", "url": "https://soundcloud.com/x/new"})
+    monkeypatch.setattr(webapp.sc, "load", lambda *a, **k: data)
+    assert client.get("/api/status").json()["counts"]["not_in_rekordbox"] == 1
+    assert [t["url"] for t in client.get("/api/missing").json()["tracks"]] == ["https://soundcloud.com/x/new"]
