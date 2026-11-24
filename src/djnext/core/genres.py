@@ -57,15 +57,25 @@ TAG_WORDS: List[Tuple[Tuple[str, ...], str]] = [
 @dataclass
 class Verdict:
     genre: str
-    sure: bool  # False = a guess from tempo alone (or a close call): worth checking
+    sure: bool  # False = a guess (few clues, or a close call): worth checking
     why: str
+    tag_genre: Optional[str] = None  # the genre the track's own tag points to, if any
 
 
 def _techno_split(bpm: float) -> str:
     return "hard-fast" if bpm > 137 else "groovy-techno"
 
 
-def classify(t: Track, set_categories: Sequence[Sequence[str]] = ()) -> Verdict:
+def tag_genre(t: Track) -> Optional[str]:
+    tag = (t.genre or "").lower().strip()
+    for words, g in TAG_WORDS:
+        if tag and any(w in tag for w in words):
+            return _techno_split(t.bpm) if g == "techno" else g
+    return None
+
+
+def classify(t: Track, set_categories: Sequence[Sequence[str]] = (), artist_votes: Optional[Dict[str, float]] = None,
+             artist_name: str = "") -> Verdict:
     score: Dict[str, float] = {g: 0.0 for g, _ in GENRES}
     clues: List[str] = []
 
@@ -79,18 +89,21 @@ def classify(t: Track, set_categories: Sequence[Sequence[str]] = ()) -> Verdict:
     total = sum(votes.values())
     if total:
         for g, v in votes.items():
-            score[g] += 3.0 * v / total  # DJ sets are the strongest clue, worth 3 points in all
+            score[g] += 3.0 * v / total  # up to 3 points, shared by the genres of the sets it was played in
         top = max(votes, key=votes.get)
         clues.append(f"played in {len(set_categories)} DJ set{'s' if len(set_categories) != 1 else ''}, mostly {NAMES[top].lower()}")
 
-    tag = (t.genre or "").lower().strip()
-    if tag:
-        for words, g in TAG_WORDS:
-            if any(w in tag for w in words):
-                g = _techno_split(t.bpm) if g == "techno" else g
-                score[g] += 2.5 if g == "other" else 1.5  # "Indie Pop" at 164 BPM is still pop
-                clues.append(f"tagged “{t.genre}”")
-                break
+    tg = tag_genre(t)
+    if tg:
+        # a specific tag ("Indie Dance", "Tech House", "Techno", "Pop") beats MixesDB's catch-all "House" sets
+        score[tg] += 1.5 if tg == "house" else 2.5
+        clues.append(f"tagged “{t.genre}”")
+
+    if artist_votes:
+        n = sum(artist_votes.values())
+        for g, v in artist_votes.items():
+            score[g] += 2.5 * v / n
+        clues.append(f"like your other {artist_name} tracks")
 
     bpm = t.bpm
     if bpm > 137:
@@ -107,41 +120,41 @@ def classify(t: Track, set_categories: Sequence[Sequence[str]] = ()) -> Verdict:
 
     ranked = sorted(score.items(), key=lambda kv: kv[1], reverse=True)
     best, second = ranked[0], ranked[1]
-    sure = bool(clues) and best[1] - second[1] >= 0.75
+    sure = bool(clues) and best[1] - second[1] >= 0.75 and (bool(tg) or total >= 3 or bool(artist_votes))
     why = " · ".join(clues) if clues else f"guessed from the tempo ({bpm:.0f} BPM)"
-    return Verdict(best[0], sure, why)
+    return Verdict(best[0], sure, why, tg)
 
 
 def sort_likes(tracks: Sequence[Track], categories_of: Dict[str, List[List[str]]],
                overrides: Optional[Dict[str, str]] = None) -> Dict[str, Verdict]:
-    """track id -> Verdict. `categories_of`: track id -> the category lists of the DJ sets it was found in."""
+    """track id -> Verdict. `categories_of`: track id -> the category lists of the DJ sets it was found in.
+
+    Tracks without a useful tag of their own follow their artist / label: if your other Maccabi House tracks are
+    tagged indie dance (or you put them there), an untagged Maccabi House edit goes there too."""
     from . import names
 
     overrides = overrides or {}
+    credits = {t.id: list(names.of(t).artists) for t in tracks}
+    tags = {t.id: tag_genre(t) for t in tracks}
+    # what each artist / label is, from tracks with real evidence: your own choices count double, tags once
+    who: Dict[str, Dict[str, float]] = {}
+    for t in tracks:
+        g, w = (overrides[t.id], 2.0) if overrides.get(t.id) in NAMES else (tags[t.id], 1.0)
+        if g and g != "other":
+            for a in credits[t.id]:
+                who.setdefault(a, {})
+                who[a][g] = who[a].get(g, 0.0) + w
     out: Dict[str, Verdict] = {}
     for t in tracks:
         if overrides.get(t.id) in NAMES:
-            out[t.id] = Verdict(overrides[t.id], True, "you put it here")
-        else:
-            out[t.id] = classify(t, categories_of.get(t.id, []))
-    # a guess follows the artist / label: if their other tracks are clearly in one list, so is this one
-    who: Dict[str, Dict[str, int]] = {}
-    credits = {t.id: set(names.of(t).artists) for t in tracks}
-    for t in tracks:
-        if out[t.id].sure:
-            for a in credits[t.id]:
-                who.setdefault(a, {}).setdefault(out[t.id].genre, 0)
-                who[a][out[t.id].genre] += 1
-    for t in tracks:
-        if out[t.id].sure:
+            out[t.id] = Verdict(overrides[t.id], True, "you put it here", tags[t.id])
             continue
-        votes: Dict[str, int] = {}
-        for a in credits[t.id]:
-            for g, n in who.get(a, {}).items():
-                votes[g] = votes.get(g, 0) + n
-        if votes:
-            g = max(votes, key=votes.get)
-            if votes[g] >= 2 * (sum(votes.values()) - votes[g]) and (g != "hard-fast" or t.bpm > 132):
-                artist = next(a for a in credits[t.id] if g in who.get(a, {}))
-                out[t.id] = Verdict(g, False, f"like your other {artist.title()} tracks")
+        votes: Dict[str, float] = {}
+        name = ""
+        if not tags[t.id]:
+            for a in credits[t.id]:
+                for g, n in who.get(a, {}).items():
+                    votes[g] = votes.get(g, 0.0) + n
+                    name = name or a.title()
+        out[t.id] = classify(t, categories_of.get(t.id, []), votes or None, name)
     return out

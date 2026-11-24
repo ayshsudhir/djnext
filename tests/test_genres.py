@@ -33,3 +33,13 @@ def test_a_guess_follows_the_artist_and_you_win():
     assert v["3"].genre == "indie-melodic" and "Maccabi House" in v["3"].why
     mine = sort_likes([sure1, sure2, guess], {}, overrides={"3": "house"})
     assert mine["3"].genre == "house" and mine["3"].why == "you put it here"
+
+
+def test_indie_dance_survives_house_sets():
+    """MixesDB almost never tags sets 'Indie Dance': those tracks show up in House / Progressive House sets."""
+    house_sets = [["House", "Progressive House", "Tech House"]] * 5
+    tagged = T(1, "Sexy M.F.", "Maccabi House", 124, "Indie Dance")
+    untagged = T(2, "Kids (Reef Kopel Maccabi Edit)", "Maccabi House", 125, "")
+    v = sort_likes([tagged, untagged], {"1": house_sets, "2": house_sets})
+    assert v["1"].genre == "indie-melodic" and v["2"].genre == "indie-melodic"
+    assert "Maccabi House" in v["2"].why
