@@ -1,1 +1,1 @@
-__version__ = "0.3.3"  # keep in step with pyproject.toml (a test checks)
+__version__ = "0.3.4"  # keep in step with pyproject.toml (a test checks)

@@ -86,27 +86,61 @@ def _download(url: str, dest: Path, opener: Callable = urllib.request.urlopen) -
 
 
 SWAP_SCRIPT = r'''#!/bin/bash
-# djnext updater: wait for the old djnext to quit, swap in the new app, open it.
+# djnext updater: wait for the old djnext to quit, then swap in the new app SAFELY:
+# copy it next to the old one first, check it's complete, and only then swap the two with an instant rename.
+# If anything goes wrong, the old app is left exactly as it was.
+trap '' HUP INT TERM  # keep going even if djnext's window or Terminal goes away
 PID="$1"; NEW="$2"; OLD="$3"; MNT="$4"; LOG="$HOME/Library/Logs/djnext.log"
-for i in $(seq 1 60); do kill -0 "$PID" 2>/dev/null || break; sleep 0.5; done
-{
-  echo "--- updating djnext: $NEW -> $OLD"
-  TRASH="$HOME/.Trash/djnext $(date +%Y%m%d-%H%M%S).app"
-  if mv "$OLD" "$TRASH" && ditto "$NEW" "$OLD"; then
-    xattr -dr com.apple.quarantine "$OLD" 2>/dev/null
-    echo "updated; old version is in the Bin"
-  else
-    echo "update failed; putting the old version back"
-    [ -d "$OLD" ] || mv "$TRASH" "$OLD"
+STAGE="$(dirname "$OLD")/.djnext-update.app"
+log() { echo "$(date '+%H:%M:%S') update: $*" >> "$LOG"; }
+for i in $(seq 1 120); do kill -0 "$PID" 2>/dev/null || break; sleep 0.5; done
+log "copying $NEW"
+rm -rf "$STAGE"
+ok=0
+if ditto "$NEW" "$STAGE" >> "$LOG" 2>&1; then
+  want=$(find "$NEW" | wc -l); got=$(find "$STAGE" | wc -l)
+  if [ "$want" -eq "$got" ] && [ -x "$STAGE/Contents/MacOS/djnext" ]; then
+    if ! command -v codesign >/dev/null || codesign --verify --deep "$STAGE" >> "$LOG" 2>&1; then ok=1; fi
   fi
-  hdiutil detach "$MNT" -quiet 2>/dev/null
-} >> "$LOG" 2>&1
+  [ $ok -eq 1 ] || log "the copy is incomplete ($got of $want files)"
+fi
+if [ $ok -eq 1 ]; then
+  TRASH="$HOME/.Trash/djnext $(date +%Y%m%d-%H%M%S).app"
+  if mv "$OLD" "$TRASH" 2>>"$LOG"; then
+    if mv "$STAGE" "$OLD" 2>>"$LOG"; then
+      xattr -dr com.apple.quarantine "$OLD" 2>/dev/null
+      log "updated; the old version is in the Bin"
+    else
+      mv "$TRASH" "$OLD"; log "couldn't put the new version in place; kept the old one"
+    fi
+  else
+    log "couldn't move the old version; kept it"
+  fi
+else
+  log "update failed; kept the old version"
+fi
+rm -rf "$STAGE"
+hdiutil detach "$MNT" -quiet 2>/dev/null
 open "$OLD"
 '''
 
 
+_installing = {"busy": False}
+
+
 def install_app(url: str, quit_app: Callable[[], None], opener: Callable = urllib.request.urlopen) -> str:
-    """Mac app: download the new version and hand over to the swap helper, then quit."""
+    """Mac app: download the new version and hand over to the swap helper, then quit. Only once at a time."""
+    if _installing["busy"]:
+        return "restarting"
+    _installing["busy"] = True
+    try:
+        return _install_app(url, quit_app, opener)
+    except Exception:
+        _installing["busy"] = False
+        raise
+
+
+def _install_app(url: str, quit_app: Callable[[], None], opener: Callable) -> str:
     bundle = app_bundle()
     if bundle is None:
         raise RuntimeError("Not running as the Mac app.")
@@ -125,8 +159,9 @@ def install_app(url: str, quit_app: Callable[[], None], opener: Callable = urlli
     script = work / "swap.sh"
     script.write_text(SWAP_SCRIPT)
     script.chmod(0o755)
-    subprocess.Popen(["/bin/bash", str(script), str(os.getpid()), str(new_app), str(bundle), str(mnt)],
-                     start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.Popen(["/usr/bin/nohup", "/bin/bash", str(script), str(os.getpid()), str(new_app), str(bundle), str(mnt)],
+                     start_new_session=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL)
     quit_app()
     return "restarting"
 

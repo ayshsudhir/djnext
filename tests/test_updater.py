@@ -54,3 +54,45 @@ def test_source_update_pulls_then_reinstalls():
         return R()
     assert updater.update_source(run=run) == "restart"
     assert calls[0][-2:] == ["pull", "--ff-only"] and "install" in calls[1]
+
+
+def _fake_app(path, files=3):
+    (path / "Contents" / "MacOS").mkdir(parents=True)
+    exe = path / "Contents" / "MacOS" / "djnext"
+    exe.write_text("#!/bin/sh\n")
+    exe.chmod(0o755)
+    for i in range(files):
+        (path / "Contents" / f"f{i}").write_text(str(i))
+    return path
+
+
+def _run_swap(tmp_path, new, old, monkeypatch):
+    import subprocess
+
+    script = tmp_path / "swap.sh"
+    # no real Bin, codesign, hdiutil or open in the test: stub them
+    body = updater.SWAP_SCRIPT.replace('$HOME/.Trash', str(tmp_path / "trash")).replace("command -v codesign", "false")
+    body = body.replace('hdiutil detach', 'true').replace('open "$OLD"', 'true')
+    (tmp_path / "trash").mkdir()
+    script.write_text(body)
+    env = {"HOME": str(tmp_path), "PATH": "/usr/bin:/bin"}
+    (tmp_path / "Library" / "Logs").mkdir(parents=True)
+    subprocess.run(["/bin/bash", str(script), "999999", str(new), str(old), "/nonexistent"], env=env, check=True)
+    return (tmp_path / "Library" / "Logs" / "djnext.log").read_text()
+
+
+def test_swap_replaces_the_app_in_one_step(tmp_path, monkeypatch):
+    new = _fake_app(tmp_path / "mnt" / "djnext.app", files=5)
+    old = _fake_app(tmp_path / "Applications" / "djnext.app", files=1)
+    log = _run_swap(tmp_path, new, old, monkeypatch)
+    assert (old / "Contents" / "f4").exists() and "updated" in log
+    assert not (tmp_path / "Applications" / ".djnext-update.app").exists()
+    assert len(list((tmp_path / "trash").iterdir())) == 1  # the old version went to the Bin
+
+
+def test_swap_keeps_the_old_app_when_the_copy_fails(tmp_path, monkeypatch):
+    new = tmp_path / "mnt" / "djnext.app"  # missing: the download/mount went wrong
+    old = _fake_app(tmp_path / "Applications" / "djnext.app", files=1)
+    log = _run_swap(tmp_path, new, old, monkeypatch)
+    assert (old / "Contents" / "MacOS" / "djnext").exists() and (old / "Contents" / "f0").exists()
+    assert "kept the old version" in log and not list((tmp_path / "trash").iterdir())
