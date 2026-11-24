@@ -84,7 +84,8 @@ def _track(t, ev: picker.Evidence) -> dict:
     return {"genre": v.genre if v else "", "genre_sure": bool(v and v.sure), "genre_why": v.why if v else "",
             "id": t.id, "label": t.label, "artist": artist, "title": title,
             "bpm": round(t.bpm, 1), "key": t.key or "?", "known": ev.dj_plays.get(t.id, 0) >= picker.KNOWN_SETS,
-            "dj_sets": ev.dj_plays.get(t.id, 0), "intro_bars": picker.intro_bars(t)}
+            "dj_sets": ev.dj_plays.get(t.id, 0), "intro_bars": picker.intro_bars(t),
+            "hot": ev.hot.get(t.id, 0.0) >= picker.HOT_SHOWN, "hot_why": ev.hot_why.get(t.id, "")}
 
 
 def _playlist_json() -> dict:
@@ -223,6 +224,27 @@ def _auto_refresh() -> None:
     if todo and not LOOKUP["running"]:
         LOOKUP.update(running=True, done=0, total=len(todo), error="")
         _lookup_worker(todo)
+    _stats_worker()
+
+
+def _stats_worker() -> None:
+    """How much each track is played on SoundCloud (for 'hot right now'): new tracks, and weekly refresh."""
+    from ..ingest import sc_stats
+
+    _, pool, _ = _load()
+    todo = sc_stats.stale(pool, sc_stats.load())
+    if not todo or LOOKUP["running"]:
+        return
+    LOOKUP.update(running=True, done=0, total=len(todo), error="")
+    try:
+        def progress(i, n, t):
+            LOOKUP.update(done=i, total=n, current="How popular is " + t.label)
+        sc_stats.update(todo, progress=progress)
+    except Exception as e:
+        LOOKUP["error"] = f"Couldn't read SoundCloud plays: {type(e).__name__}"
+    finally:
+        LOOKUP.update(running=False, current="")
+        _refresh_evidence()
 
 
 def start_auto_refresh() -> None:
@@ -266,9 +288,10 @@ def make_playlist(body: MakeIn):
     start = next((t for t in pool if t.id == body.start_id), None) if body.start_id else None
     import random
 
+    recent, recent_pairs = service.recent_penalties(body.genre, ev.hot)
     STATE["playlist"] = picker.build(pool, ev, length=body.length, start=start,
                                      shape=body.shape if body.shape in picker.SHAPES else "build",
-                                     recent=service.recent_penalties(body.genre), rng=random.Random())
+                                     recent=recent, recent_pairs=recent_pairs, rng=random.Random())
     service.remember_playlist(body.genre, [t.id for t in STATE["playlist"].tracks])
     return _playlist_json()
 
@@ -339,8 +362,9 @@ def rebuild_from(body: SlotIn):
     import random
 
     genre = STATE.get("genre") or "tech-house"
+    recent, recent_pairs = service.recent_penalties(genre, ev.hot)
     rest = picker.build(pool, ev, length=len(pl.steps) - len(keep) + 1, start=keep[-1], shape=pl.shape,
-                        avoid={t.id for t in keep[:-1]}, recent=service.recent_penalties(genre), rng=random.Random())
+                        avoid={t.id for t in keep[:-1]}, recent=recent, recent_pairs=recent_pairs, rng=random.Random())
     STATE["playlist"] = _restep(keep + rest.tracks[1:], pl.shape, ev)
     return _playlist_json()
 

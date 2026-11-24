@@ -28,6 +28,8 @@ MIN_S, MAX_S = 120, 15 * 60  # shorter = a preview clip, longer = a recorded DJ 
 MAX_TEMPO_GAP = 0.05  # beyond ~5% pitched vocals and synths start to sound wrong (the FLX4 allows 6%)
 COMFY_TEMPO_GAP = 0.02  # up to 2% nobody on the floor notices
 KNOWN_SETS = 5  # found in at least this many DJ sets = a tune people know
+HOT_WEIGHT = 1.2  # bonus for the hottest track (lots of plays, lots of DJ support this year); 0 for the least
+HOT_SHOWN = 0.75  # from here a track is shown as "hot right now"
 
 
 @dataclass
@@ -39,10 +41,13 @@ class Evidence:
     artist_affinity: Dict[Tuple[str, str], float] = field(default_factory=dict)
     dj_plays: Dict[str, int] = field(default_factory=dict)  # track id -> DJ sets it was found in
     blocked: Set[Tuple[str, str]] = field(default_factory=set)  # transitions you said don't work
+    hot: Dict[str, float] = field(default_factory=dict)  # track id -> 0..1 how hot right now (core/popularity.py)
+    hot_why: Dict[str, str] = field(default_factory=dict)
 
     @classmethod
-    def build(cls, dj=None, blocked: Iterable[Tuple[str, str]] = ()):
-        ev = cls(blocked=set(map(tuple, blocked)))
+    def build(cls, dj=None, blocked: Iterable[Tuple[str, str]] = (), hot: Optional[Dict[str, float]] = None,
+              hot_why: Optional[Dict[str, str]] = None):
+        ev = cls(blocked=set(map(tuple, blocked)), hot=dict(hot or {}), hot_why=dict(hot_why or {}))
         if dj is not None:
             ev.dj_direct, ev.dj_near, ev.dj_same_set = dict(dj.direct), dict(dj.near), dict(dj.same_set)
             ev.artist_affinity, ev.dj_plays = dict(dj.artist_affinity), dict(dj.plays)
@@ -178,6 +183,12 @@ def move(a: Track, b: Track, ev: Evidence) -> Move:
             tested.append((parts["same_scene"], f"DJs who play this also play {artist}"))
     if (a.id, b.id) in ev.blocked:
         parts["you_said_no"] = -20.0
+    h = ev.hot.get(b.id)
+    if h is not None:
+        parts["hot"] = HOT_WEIGHT * h
+        if h >= HOT_SHOWN:
+            detail = ev.hot_why.get(b.id, "")
+            tested.append((parts["hot"] - 1.0, "🔥 hot right now" + (f" ({detail})" if detail else "")))
 
     ib, oa = intro_bars(b), outro_bars(a)
     blend: Optional[str] = None
@@ -280,14 +291,17 @@ VARIETY = 0.6  # how much chance mixes up close calls (score points); 0 = always
 def build(tracks: Sequence[Track], ev: Evidence, length: int = 12, start: Optional[Track] = None,
           shape: str = "build", beam: int = 16, avoid: Iterable[str] = (),
           recent: Optional[Dict[str, float]] = None, rng: Optional[random.Random] = None,
-          variety: float = VARIETY) -> Playlist:
+          variety: float = VARIETY, recent_pairs: Optional[Dict[Tuple[str, str], float]] = None) -> Playlist:
     """The best chain of `length` tracks (looking ahead, so one good pair doesn't lead into a dead end).
 
     A different playlist every time: `recent` = {track id: penalty} for tracks in your last few playlists of this
-    genre (they step aside so others get a turn), and `rng` adds a little chance to close calls and the opener.
+    genre (they step aside a little; hot tracks hardly at all), `recent_pairs` = transitions from those playlists
+    (the main thing that changes: the crowd gets a different set even if hits come back), and `rng` adds a little
+    chance to close calls and the opener.
     The hard rules (tempo, key, artist) never bend for variety."""
     avoid = set(avoid)
     recent = recent or {}
+    recent_pairs = recent_pairs or {}
     noise: Dict[Tuple[str, str], float] = {}
 
     def luck(a_id: str, b_id: str, spread: float = variety) -> float:
@@ -317,7 +331,7 @@ def build(tracks: Sequence[Track], ev: Evidence, length: int = 12, start: Option
             links = sorted((m.score for b in tracks if (m := mv(t, b)) is not None), reverse=True)[:3]
             base = (-2.0 * (energy.get(t.id, 0.5) - target_energy(0, length, shape)) ** 2
                     + 0.3 * sum(links) / 3 if links else -5.0)
-            return base - recent.get(t.id, 0.0) + luck("", t.id, 2 * variety)
+            return base + 0.6 * ev.hot.get(t.id, 0.0) - recent.get(t.id, 0.0) + luck("", t.id, 2 * variety)
         beams = [([t], opener(t)) for t in sorted(tracks, key=opener, reverse=True)[:beam]]
 
     for i in range(1, length):
@@ -332,7 +346,7 @@ def build(tracks: Sequence[Track], ev: Evidence, length: int = 12, start: Option
                 options = [(b, move(a, b, ev)) for b in tracks if b.id not in used and mixable(a, b, 2)]
             for b, m in options:
                 grown.append((seq + [b], total + m.score + _flow_penalty(seq, b, energy, i, length, shape, ev)
-                              - recent.get(b.id, 0.0) + luck(a.id, b.id)))
+                              - recent.get(b.id, 0.0) - recent_pairs.get((a.id, b.id), 0.0) + luck(a.id, b.id)))
         if not grown:
             break
         grown.sort(key=lambda x: x[1], reverse=True)

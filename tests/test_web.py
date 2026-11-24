@@ -173,7 +173,11 @@ def test_auto_refresh_updates_old_likes_then_looks_up(client, monkeypatch):
     monkeypatch.setattr(webapp.sc, "fetch", lambda user, log=None: {**soundcloud_data(), "user": user})
     monkeypatch.setattr(webapp.sc, "save", lambda d: saved.append(d))
     monkeypatch.setattr(mixesdb, "update", lambda tracks, progress=None: looked.append(len(tracks)))
+    from djnext.ingest import sc_stats
+    stats = []
+    monkeypatch.setattr(sc_stats, "update", lambda tracks, progress=None: stats.append(len(tracks)))
     webapp._auto_refresh()
+    assert stats == [12]  # then how much each track is played on SoundCloud
     assert saved and saved[0]["user"] == "me" and saved[0]["playlists"] == {}
     assert looked == [12] and webapp.LOOKUP["running"] is False
 
@@ -214,4 +218,8 @@ def test_make_another_gives_a_new_playlist(client):
     assert len(set(seen)) >= 2  # not the same playlist over and over
     recent = service.read_settings()["recent_playlists"]["tech-house"]
     assert [tuple(x) for x in recent] == seen[::-1]  # newest first, last 3 kept
-    assert service.recent_penalties("tech-house")[seen[-1][0]] == 3.0
+    tracks, pairs = service.recent_penalties("tech-house")
+    last = seen[-1]
+    assert tracks[last[0]] == 1.5 and pairs[(last[0], last[1])] == 2.5  # the same change again is avoided most
+    tracks_hot, _ = service.recent_penalties("tech-house", hot={last[0]: 1.0})
+    assert tracks_hot[last[0]] == 0.0  # a hot track can come straight back

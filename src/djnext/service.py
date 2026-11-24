@@ -117,25 +117,34 @@ def send_genre_lists(lists: Dict[str, List[Track]]) -> dict:
 
 
 def evidence(lib: Library, pool: List[Track]) -> picker.Evidence:
+    from .core.popularity import hotness
+    from .ingest import sc_stats
+
     dj = mixesdb.pairs(pool, mixesdb.Store.load())
     blocked = [tuple(p) for p in read_settings().get("blocked_pairs") or []]
-    return picker.Evidence.build(dj, blocked)
+    hot, why = hotness(pool, sc_stats.load(), dj.recent_plays)
+    return picker.Evidence.build(dj, blocked, hot, why)
 
 
 # ---------- a different playlist every time ----------
 
 RECENT_KEEP = 3  # remember the last 3 playlists per genre
-RECENT_PENALTY = (3.0, 2.0, 1.0)  # last playlist's tracks step aside most; three playlists ago only a little
+TRACK_REST = (1.5, 1.0, 0.5)  # a track from the last playlist steps aside a little (hot tracks hardly at all)
+PAIR_REST = (2.5, 1.5, 0.8)  # the same transition again is what really makes a set feel the same
 
 
-def recent_penalties(genre: str) -> Dict[str, float]:
-    """{track id: how strongly to avoid it} from your last playlists of this genre."""
+def recent_penalties(genre: str, hot: Optional[Dict[str, float]] = None):
+    """({track id: penalty}, {(a, b): penalty}) from your last playlists of this genre."""
+    hot = hot or {}
     lists = (read_settings().get("recent_playlists") or {}).get(genre) or []
-    out: Dict[str, float] = {}
+    tracks: Dict[str, float] = {}
+    pairs: Dict[Tuple[str, str], float] = {}
     for age, ids in enumerate(lists[:RECENT_KEEP]):
         for tid in ids:
-            out[tid] = max(out.get(tid, 0.0), RECENT_PENALTY[age])
-    return out
+            tracks[tid] = max(tracks.get(tid, 0.0), TRACK_REST[age] * (1.0 - hot.get(tid, 0.0)))
+        for a, b in zip(ids, ids[1:]):
+            pairs[(a, b)] = max(pairs.get((a, b), 0.0), PAIR_REST[age])
+    return tracks, pairs
 
 
 def remember_playlist(genre: str, track_ids: List[str]) -> None:

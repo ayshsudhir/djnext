@@ -136,7 +136,7 @@
       </div>
       <button class="btn" id="makeBtn">Make playlist</button>
     </div>
-    <div class="sub" id="freshNote" style="margin-top:10px">Every playlist is different: tracks from your last 3 playlists of this genre step aside so others get a turn.</div>
+    <div class="sub" id="freshNote" style="margin-top:10px">Every playlist is a different set: djnext avoids repeating the changes from your last 3 sets of this genre. Hot tracks (🔥 lots of plays and DJ support this year) can come back.</div>
     <div class="msg" id="makeMsg"></div>
   </section>
 
@@ -208,7 +208,7 @@ function renderStatus(s) {
   $("prog").hidden = !L.running;
   if (L.running) {
     $("prog").firstElementChild.style.width = `${Math.round(100 * L.done / Math.max(1, L.total))}%`;
-    $("djline").textContent = `Looking your tracks up in DJ tracklists… ${L.done} of ${L.total} (${L.current})`;
+    $("djline").textContent = `${L.current.startsWith("How popular") ? "Checking how much your tracks are played" : "Looking your tracks up in DJ tracklists"}… ${L.done} of ${L.total}`;
   } else if (L.current) {
     $("djline").textContent = L.current;
     setTimeout(refresh, 3000);
@@ -222,7 +222,7 @@ function renderStatus(s) {
   $("countsLine").textContent = `From ${s.soundcloud.likes} likes: ${c.not_in_rekordbox} not in rekordbox yet, ${c.not_a_track} clips or DJ sets, ${c.duplicate} second uploads, ${c.removed} removed by you.`;
   const opts = (sel) => s.genres.map(g => `<option value="${g.id}" ${g.id === sel ? "selected" : ""}>${esc(g.name)}</option>`).join("");
   $("pool").innerHTML = s.genres.filter(g => g.count).map(g => `<h3>${esc(g.name)} <span>${g.count} tracks${g.guessed ? ` · ${g.guessed} guessed` : ""}</span></h3>` +
-    s.tracks.filter(t => t.genre === g.id).sort((a, b) => a.bpm - b.bpm).map(t => `<div class="prow"><span>${t.genre_sure ? "" : `<span class="guess" title="${esc(t.genre_why)}">?</span>`}${esc(t.artist)} – ${esc(t.title)} <span class="sub">${t.bpm} · ${t.key}${t.dj_sets ? ` · in ${t.dj_sets} DJ sets` : ""}</span></span><span style="white-space:nowrap"><select data-move="${t.id}" aria-label="Move to genre">${opts(t.genre)}</select> <button class="link" data-rm="${t.id}">Don't use</button></span></div>`).join("")).join("");
+    s.tracks.filter(t => t.genre === g.id).sort((a, b) => a.bpm - b.bpm).map(t => `<div class="prow"><span>${t.genre_sure ? "" : `<span class="guess" title="${esc(t.genre_why)}">?</span>`}${esc(t.artist)} – ${esc(t.title)} <span class="sub">${t.bpm} · ${t.key}${t.hot ? " · 🔥" : ""}${t.dj_sets ? ` · in ${t.dj_sets} DJ sets` : ""}</span></span><span style="white-space:nowrap"><select data-move="${t.id}" aria-label="Move to genre">${opts(t.genre)}</select> <button class="link" data-rm="${t.id}">Don't use</button></span></div>`).join("")).join("");
   sendNote();
   if (L.running) setTimeout(refresh, 3000);
 }
@@ -254,7 +254,7 @@ function renderPlaylist(p) {
       <div class="num">${i + 1}</div>
       <div>
         <div><span class="title">${esc(s.title)}</span> <span class="artist">· ${esc(s.artist)}</span></div>
-        <div class="tags"><span class="tag">${s.bpm} BPM</span><span class="tag">${esc(s.key)}</span>${s.known ? `<span class="tag known">crowd knows it</span>` : ""}${s.intro_bars != null ? `<span class="tag">${s.intro_bars}-bar intro</span>` : ""}</div>
+        <div class="tags"><span class="tag">${s.bpm} BPM</span><span class="tag">${esc(s.key)}</span>${s.hot ? `<span class="tag known" title="${esc(s.hot_why)}">🔥 hot right now</span>` : s.known ? `<span class="tag known">crowd knows it</span>` : ""}${s.intro_bars != null ? `<span class="tag">${s.intro_bars}-bar intro</span>` : ""}</div>
         <div class="why ${i === 0 ? "first" : ""}">${i === 0 ? "Opener" : esc(s.why).replace(/^⚠ hard mix:/, '<span class="warn">⚠ hard mix:</span>')}</div>
         <div class="cues">${cueText(s.cues)}</div>
       </div>

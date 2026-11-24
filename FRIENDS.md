@@ -24,7 +24,7 @@ Your likes are sorted into **Groovy techno, Tech house, House, Indie dance & mel
 4. Optional: **Start with** a track you want to open with. Otherwise djnext chooses.
 5. Press **Make playlist**. It only uses tracks from that genre list.
 
-**A different playlist every time:** press **Make another** for a new one. djnext remembers your last 3 playlists for each genre and lets other tracks have a turn (the most recent playlist's tracks step aside most), and close calls go a different way each time. The mixing rules never bend for variety.
+**A different set every time:** press **Make another** for a new one. djnext remembers your last 3 sets for each genre and avoids repeating the same changes from one track to the next, so the crowd hears a different set. Hot tracks can come back; other tracks from your last set step aside a little. The mixing rules never bend for variety.
 
 Each track shows its tempo and key, **why it follows the track before** (for example *real DJs played it straight after this twice*, or *you've mixed these before*), and the **hot cues** it will get.
 
@@ -46,7 +46,8 @@ For every "this track, then that one" djnext checks, in this order:
 2. **Has it been tested?** Professional DJs played them back to back (MixesDB tracklists). What you played before is never used.
 3. **Same groove?** The two tracks turn up in the same DJ sets, or DJs who play one also play the other's artist.
 4. **Clean blend?** A long intro to lay over the outro is preferred (from rekordbox's phrase analysis).
-5. **Does it keep the flow?** Small tempo steps that climb rather than jump around, energy following the shape you picked, never the same artist (or remixer) twice in a row, and a mix of tunes the crowd knows and deeper cuts.
+5. **Is it hot right now?** 🔥 Tracks with lots of plays on SoundCloud (especially recent ones) and lots of professional DJ sets this year get a bonus. djnext checks the play counts once a week in the background.
+6. **Does it keep the flow?** Small tempo steps that climb rather than jump around, energy following the shape you picked, never the same artist (or remixer) twice in a row, and a mix of tunes the crowd knows and deeper cuts.
 
 ## If something goes wrong
 - **Undo:** after a Send, press **Undo** next to the result. rekordbox goes back exactly as it was before that Send (quit rekordbox first). Every Send is backed up beforehand (Mac app: `~/Library/Application Support/djnext/data/backups`; ZIP version: `data/backups`).

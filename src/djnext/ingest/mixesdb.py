@@ -150,10 +150,26 @@ class DJPairs:
     same_set: Dict[frozenset, int] = field(default_factory=lambda: defaultdict(int))
     artist_affinity: Dict[Tuple[str, str], float] = field(default_factory=dict)  # (a, b): share of a's sets with b's artist
     plays: Dict[str, int] = field(default_factory=dict)  # track id -> sets found
+    recent_plays: Dict[str, int] = field(default_factory=dict)  # track id -> sets from the last 12 months
     checked: int = 0
 
 
-def pairs(pool: Sequence[Track], store: Store) -> DJPairs:
+def set_date(title: str) -> Optional[datetime]:
+    """'2025-08-29 - Adam Ten @ ...' -> 29 Aug 2025; '2024 - ...' -> mid 2024; no date -> None."""
+    import re
+
+    m = re.match(r"^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?", title)
+    if not m:
+        return None
+    y, mo, d = int(m.group(1)), int(m.group(2) or 6), int(m.group(3) or 15)
+    try:
+        return datetime(y, min(max(mo, 1), 12), min(max(d, 1), 28))
+    except ValueError:
+        return None
+
+
+def pairs(pool: Sequence[Track], store: Store, now: Optional[datetime] = None) -> DJPairs:
+    now = now or datetime.now()
     out = DJPairs()
     parsed = {t.id: names.of(t) for t in pool}
     by_set: Dict[str, List[str]] = defaultdict(list)
@@ -163,6 +179,7 @@ def pairs(pool: Sequence[Track], store: Store) -> DJPairs:
             continue
         out.checked += 1
         out.plays[t.id] = len(info["sets"])
+        out.recent_plays[t.id] = sum(1 for st in info["sets"] if (d := set_date(st)) and (now - d).days <= 365)
         for st in info["sets"]:
             by_set[st].append(t.id)
     for st, ids in by_set.items():
