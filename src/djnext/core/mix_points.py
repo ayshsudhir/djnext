@@ -40,7 +40,12 @@ def _b_target(sb: TrackStructure) -> Phrase:
     """B's 'arrival' moment (where the bass swap / drop happens).
     1. its first drop/chorus, if that comes 4-40 bars in
     2. otherwise a phrase change about 16 bars in (8-32)
-    3. otherwise its first drop, wherever it is (the cue is then placed shortly before it)"""
+    3. otherwise its first drop, wherever it is (the cue is then placed shortly before it)
+    When rekordbox's 3-band waveform is there, "drop" means where the track audibly gets loud (the bass comes in),
+    because rekordbox's phrase names are often off (whole minutes called "Build")."""
+    heard = sb.arrival()
+    if heard is not None:
+        return heard
     bar = _bar(sb.bpm)
     b0 = sb.phrases[0].start_s
 

@@ -97,3 +97,24 @@ def test_beginner_blends_are_short():
     assert plan(a, b, "bass_swap", beg).blend_bars <= 16
     adv_cfg = Config(); adv_cfg.skill = "advanced"
     assert plan(a, b, "bass_swap", adv_cfg).blend_bars == 32
+
+
+def test_heard_energy_beats_rekordbox_labels():
+    """O Superman: rekordbox calls 0:44-3:17 all 'Build', but the bass is in from 0:44 and the track goes on to 5:38.
+    The swap goes where the bass comes in, and the track is never left before its last big part."""
+    from djnext.core.structure import TrackStructure
+
+    bpm = 130.0
+    beats = [i * 60.0 / bpm for i in range(800)]
+    # (start beat, kind) high mood: 1 intro, 2 build, 3 breakdown, 5 drop, 6 outro
+    entries = [(1, 1), (65, 2), (129, 2), (193, 2), (257, 2), (321, 5), (385, 3), (417, 2), (481, 5), (545, 3),
+               (609, 6)]
+    st = TrackStructure.build(bpm, beats, 1, entries, 641)
+    #          intro quiet, bass in, big ..................., breakdown, build, last drop, breakdown, outro
+    levels = [0.2, 0.7, 0.9, 0.9, 0.9, 0.9, 0.5, 0.85, 1.0, 0.3, 0.2]
+    cols = []
+    for p, lv in zip(st.phrases, levels):
+        cols += [(int(lv * 40), int(lv * 40), int(lv * 40))] * max(1, round((p.end_s - p.start_s) * 4))
+    st.set_energy(cols, len(cols) / 4)
+    assert st.arrival().start_s == st.phrases[1].start_s  # the bass comes in, though rekordbox says "Build"
+    assert st.natural_mix_out(240) == st.phrases[9].start_s  # after the last drop, not ~4 minutes in

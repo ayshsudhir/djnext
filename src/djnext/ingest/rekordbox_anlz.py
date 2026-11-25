@@ -44,7 +44,19 @@ def _read_tags(path: Path, wanted: Iterable[str]) -> Dict[str, object]:
     return found
 
 
-def load_structure(analysis_path: str, share_dir: Optional[Path] = None) -> Optional[TrackStructure]:
+def _bands(two_ex: Path) -> list:
+    """rekordbox's 3-band waveform preview (PWV6, in the .2EX file): 1200 columns of (low, mid, high)."""
+    if not two_ex.exists():
+        return []
+    tag = _read_tags(two_ex, ["PWV6"]).get("PWV6")
+    if tag is None:
+        return []
+    raw = bytes(tag.content.entries)
+    return [(raw[i], raw[i + 1], raw[i + 2]) for i in range(0, len(raw) - 2, 3)]
+
+
+def load_structure(analysis_path: str, share_dir: Optional[Path] = None,
+                   duration_s: float = 0.0) -> Optional[TrackStructure]:
     if not analysis_path:
         return None
     share_dir = share_dir or rekordbox_share_dir()
@@ -66,7 +78,12 @@ def load_structure(analysis_path: str, share_dir: Optional[Path] = None) -> Opti
         return None
     bpm = float(bpms[0]) if len(bpms) else 120.0
     entries = [(e.beat, e.kind) for e in pssi.entries]
-    return TrackStructure.build(bpm, [float(t) for t in times], int(pssi.mood), entries, int(pssi.end_beat))
+    st = TrackStructure.build(bpm, [float(t) for t in times], int(pssi.mood), entries, int(pssi.end_beat))
+    try:
+        st.set_energy(_bands(base.with_suffix(".2EX")), duration_s)
+    except Exception:  # no 3-band waveform: cues fall back to rekordbox's phrase names
+        pass
+    return st
 
 
 def attach_structures(tracks: Iterable[Track], share_dir: Optional[Path] = None) -> Dict[str, int]:
@@ -74,6 +91,6 @@ def attach_structures(tracks: Iterable[Track], share_dir: Optional[Path] = None)
     counts = {"with": 0, "without": 0}
     for t in tracks:
         if t.structure is None and t.analysis_path:
-            t.structure = load_structure(t.analysis_path, share_dir)
+            t.structure = load_structure(t.analysis_path, share_dir, float(t.duration or 0))
         counts["with" if t.structure else "without"] += 1
     return counts

@@ -13,6 +13,9 @@ _LOW = {1: "Intro", 2: "Verse", 3: "Verse", 4: "Verse", 5: "Verse", 6: "Verse", 
 _MOODS = {1: _HIGH, 2: _MID, 3: _LOW}
 
 PEAK_LABELS = ("Drop", "Chorus")
+LOUD = 0.75  # a phrase at 75% of the track's full sound is one of its big parts
+GOING = 0.65  # still in full swing (not yet the outro)
+RISE = 0.2  # this much louder than the phrase before = the bass / the drop comes in
 
 
 def phrase_label(mood: int, kind: int) -> str:
@@ -37,6 +40,8 @@ class TrackStructure:
     bpm: float
     beat_times: List[float]  # seconds, index 0 = beat 1
     phrases: List[Phrase] = field(default_factory=list)
+    # how full each phrase sounds, 0..1 (bass counts most), from rekordbox's 3-band waveform; empty = unknown
+    energy: List[float] = field(default_factory=list)
 
     @classmethod
     def build(
@@ -81,11 +86,55 @@ class TrackStructure:
     def boundaries(self) -> List[float]:
         return [p.start_s for p in self.phrases]
 
+    def set_energy(self, columns: Sequence[Sequence[float]], duration_s: float) -> None:
+        """columns: rekordbox's 3-band waveform preview, (low, mid, high) per column across the whole file."""
+        if not columns or duration_s <= 0 or not self.phrases:
+            return
+        n = len(columns)
+        level = [0.6 * lo + 0.2 * mid + 0.2 * hi for lo, mid, hi in columns]
+        ref = sorted(level)[int(0.9 * (n - 1))] or 1.0
+        out = []
+        for p in self.phrases:
+            a = min(n - 1, int(p.start_s / duration_s * n))
+            b = max(a + 1, min(n, int(p.end_s / duration_s * n)))
+            out.append(min(1.0, sum(level[a:b]) / (b - a) / ref))
+        self.energy = out
+
+    def loud(self, i: int) -> bool:
+        return bool(self.energy) and self.energy[i] >= LOUD
+
+    def arrival(self, min_bars: float = 4, max_bars: float = 48) -> Optional[Phrase]:
+        """Where the groove really kicks in: the first phrase that gets loud after a quieter one (the bass comes in,
+        the drop lands), judged by how the track sounds rather than by rekordbox's phrase names."""
+        if not self.energy:
+            return None
+        bar = 4 * 60.0 / (self.bpm or 120.0)
+        b0 = self.phrases[0].start_s
+        for i in range(1, len(self.phrases)):
+            bars_in = (self.phrases[i].start_s - b0) / bar
+            if bars_in > max_bars:
+                break
+            if bars_in >= min_bars and self.energy[i] >= 0.6 and self.energy[i] - self.energy[i - 1] >= RISE:
+                return self.phrases[i]
+        return None
+
     def natural_mix_out(self, max_play_s: float) -> float:
-        """Where this track would normally hand over: its outro, or for very long tracks the last
-        phrase boundary before roughly max_play_s (e.g. after the second drop)."""
+        """Where this track would normally hand over: once its last loud part is over (its outro).
+        Only very long tracks hand over earlier: right after a loud part ends, from about max_play_s on.
+        Never before the track's main part has played."""
         if not self.phrases:
             return 0.0
+        if self.energy:
+            ph, e = self.phrases, self.energy
+            loud = [i for i in range(len(ph)) if e[i] >= GOING]
+            if loud:
+                last = loud[-1]
+                out = ph[last + 1].start_s if last + 1 < len(ph) else (self.outro.start_s if self.outro else ph[-1].start_s)
+                if out <= max_play_s + 180:
+                    return out
+                calm = [ph[i].start_s for i in range(1, len(ph))
+                        if e[i] < GOING - 0.1 and e[i - 1] >= LOUD and ph[i].start_s >= max_play_s]
+                return calm[0] if calm else out
         target = self.outro.start_s if self.outro else self.phrases[-1].start_s
         if target <= max_play_s + 90:
             return target
