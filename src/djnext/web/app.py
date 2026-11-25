@@ -23,7 +23,7 @@ app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
 
 STATE: dict = {"lib": None, "pool": None, "counts": None, "ev": None, "verdicts": None, "playlist": None,
                "genre": None}
-LOOKUP: dict = {"running": False, "done": 0, "total": 0, "current": "", "error": ""}
+LOOKUP: dict = {"running": False, "done": 0, "total": 0, "current": "", "error": "", "kind": ""}
 _lock = threading.Lock()
 
 
@@ -127,6 +127,9 @@ def status():
     start_auto_refresh()
     c = STATE["counts"]
     store = mixesdb.Store.load()
+    from ..ingest import listen
+
+    ears = listen.load()
     v = STATE["verdicts"]
     out.update({
         "genres": [{"id": g, "name": name, "count": sum(1 for t in pool if v[t.id].genre == g),
@@ -135,6 +138,8 @@ def status():
         "pool": len(pool),
         "counts": {**c, "in_rekordbox": c["likes"], "not_in_rekordbox": max(0, len(data.get("likes", [])) - c["likes"])},
         "dj_checked": sum(1 for t in pool if t.id in store.tracks),
+        "heard": sum(1 for t in pool if listen.heard(ears.get(t.soundcloud_id or ""))),
+        "protected": sum(1 for t in pool if (ears.get(t.soundcloud_id or "") or {}).get("protected")),
         "dj_found": sum(1 for t in pool if store.tracks.get(t.id, {}).get("sets")),
         "tracks": sorted((_track(t, ev) for t in pool), key=lambda d: d["label"].lower()),
     })
@@ -224,9 +229,33 @@ def _auto_refresh() -> None:
     _, pool, _ = _load()
     todo = mixesdb.Store.load().todo(pool)
     if todo and not LOOKUP["running"]:
-        LOOKUP.update(running=True, done=0, total=len(todo), error="")
+        LOOKUP.update(running=True, done=0, total=len(todo), error="", kind="dj")
         _lookup_worker(todo)
+    _listen_worker()
     _stats_worker()
+
+
+def _listen_worker() -> None:
+    """Listen to every like not heard yet (stream, judge, delete the audio). The genre lists and the
+    'sounds alike' factor get better as it goes: they're refreshed every 25 tracks and at the end."""
+    from ..ingest import listen
+
+    _, pool, _ = _load()
+    todo = listen.todo(pool, listen.load())
+    if not todo or LOOKUP["running"] or not listen.available():
+        return
+    LOOKUP.update(running=True, done=0, total=len(todo), error="", kind="listen", current="Getting the listening model…")
+    try:
+        def progress(i, n, t):
+            LOOKUP.update(done=i, total=n, current=t.label)
+            if i and i % 25 == 0:
+                _refresh_evidence()
+        listen.update(todo, progress=progress)
+    except Exception as e:  # offline etc.: carry on, try again next time djnext opens
+        LOOKUP["error"] = f"Couldn't listen to your tracks: {type(e).__name__}"
+    finally:
+        LOOKUP.update(running=False, current="")
+        _refresh_evidence()
 
 
 def _stats_worker() -> None:
@@ -237,7 +266,7 @@ def _stats_worker() -> None:
     todo = sc_stats.stale(pool, sc_stats.load())
     if not todo or LOOKUP["running"]:
         return
-    LOOKUP.update(running=True, done=0, total=len(todo), error="")
+    LOOKUP.update(running=True, done=0, total=len(todo), error="", kind="stats")
     try:
         def progress(i, n, t):
             LOOKUP.update(done=i, total=n, current="How popular is " + t.label)
@@ -265,7 +294,7 @@ def djsets():
     todo = mixesdb.Store.load().todo(pool)
     if not todo:
         return status()
-    LOOKUP.update(running=True, done=0, total=len(todo), current="", error="")
+    LOOKUP.update(running=True, done=0, total=len(todo), current="", error="", kind="dj")
     threading.Thread(target=_lookup_worker, args=(todo,), daemon=True).start()
     return status()
 

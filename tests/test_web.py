@@ -63,12 +63,12 @@ def test_make_playlist_with_hot_cues(client):
 
 
 def test_swap_and_doesnt_work_here(client):
-    p = client.post("/api/playlist", json={"length": 6}).json()
+    p = client.post("/api/playlist", json={"length": 5}).json()
     opts = client.post("/api/playlist/options", json={"position": 2}).json()["options"]
     used = {s["id"] for s in p["steps"]}
     assert opts and all(o["id"] not in used for o in opts)
     p2 = client.post("/api/playlist/replace", json={"position": 2, "track_id": opts[0]["id"]}).json()
-    assert p2["steps"][2]["id"] == opts[0]["id"] and len(p2["steps"]) == 6
+    assert p2["steps"][2]["id"] == opts[0]["id"] and len(p2["steps"]) == 5
     before, dropped = p2["steps"][2]["id"], p2["steps"][3]["id"]
     p3 = client.post("/api/playlist/rebuild_from", json={"position": 3}).json()
     assert p3["steps"][2]["id"] == before and p3["steps"][3]["id"] != dropped
@@ -176,7 +176,12 @@ def test_auto_refresh_updates_old_likes_then_looks_up(client, monkeypatch):
     from djnext.ingest import sc_stats
     stats = []
     monkeypatch.setattr(sc_stats, "update", lambda tracks, progress=None: stats.append(len(tracks)))
+    from djnext.ingest import listen
+    heard = []
+    monkeypatch.setattr(listen, "available", lambda: True)
+    monkeypatch.setattr(listen, "update", lambda tracks, progress=None: heard.append(len(tracks)))
     webapp._auto_refresh()
+    assert heard == [12]  # then djnext listens to every track not heard yet
     assert stats == [12]  # then how much each track is played on SoundCloud
     assert saved and saved[0]["user"] == "me" and saved[0]["playlists"] == {}
     assert looked == [12] and webapp.LOOKUP["running"] is False

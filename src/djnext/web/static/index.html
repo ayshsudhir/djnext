@@ -209,7 +209,9 @@ function renderStatus(s) {
   $("prog").hidden = !L.running;
   if (L.running) {
     $("prog").firstElementChild.style.width = `${Math.round(100 * L.done / Math.max(1, L.total))}%`;
-    $("djline").textContent = `${L.current.startsWith("How popular") ? "Checking how much your tracks are played" : "Looking your tracks up in DJ tracklists"}… ${L.done} of ${L.total}`;
+    const what = {listen: "🎧 Listening to your tracks to sort them by how they sound (the audio isn't kept)",
+                  stats: "Checking how much your tracks are played", dj: "Looking your tracks up in DJ tracklists"}[L.kind] || "Working";
+    $("djline").textContent = `${what}… ${L.done} of ${L.total}`;
   } else if (L.current) {
     $("djline").textContent = L.current;
     setTimeout(refresh, 3000);
@@ -217,7 +219,7 @@ function renderStatus(s) {
     const left = s.pool - s.dj_checked;
     $("djline").textContent = left > 0
       ? `${left} track${left > 1 ? "s" : ""} not looked up in DJ tracklists yet. "Find DJ pairs" checks which of your tracks real DJs play together (about 15 seconds per track, only once).`
-      : `${s.dj_found} of ${s.pool} tracks found in real DJ sets.` + (L.error ? ` ${L.error}` : "");
+      : `🎧 Listened to ${s.heard} of ${s.pool} tracks` + (s.protected ? ` (${s.protected} are copy-protected by their label, so they're sorted by artist, DJ sets and tag)` : "") + `. ${s.dj_found} found in real DJ sets.` + (L.error ? ` ${L.error}` : "");
   }
   $("djBtn").disabled = L.running || s.pool - s.dj_checked <= 0;
   $("countsLine").textContent = `From ${s.soundcloud.likes} likes: ${c.not_in_rekordbox} not in rekordbox yet, ${c.not_a_track} clips or DJ sets, ${c.duplicate} second uploads, ${c.removed} removed by you.`;

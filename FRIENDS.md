@@ -12,7 +12,9 @@ djnext sorts **your SoundCloud likes** into genre lists, then picks a playlist f
 3. Open **Your genre lists** at the bottom and press **Find DJ pairs**. djnext looks each of your tracks up in DJ tracklists on [MixesDB](https://www.mixesdb.com) to learn which of them real DJs play together, and which genre those DJ sets are. It takes about 15 seconds per track, only once; you can keep using djnext meanwhile.
 
 ## Genre lists
-Your likes are sorted into **Groovy techno, Tech house, House, Indie dance & melodic, Hard & fast** and **Other**. djnext decides from three clues: the genres of the DJ sets a track was played in (the strongest), its genre tag, and its tempo. A track with few clues follows your other tracks by the same artist or label.
+Your likes are sorted into **Groovy techno, Tech house, House, Indie dance & melodic, Hard & fast** and **Other**. djnext decides mainly by **listening**: a music model hears each whole track once and says what style it sounds like. Then come what the artist's other tracks sound like, the genres of the DJ sets the track was played in, and its genre tag. Tempo only separates techno from hard & fast.
+
+**🎧 Listening:** each like is streamed from SoundCloud once (about 8 seconds per track, in the background), the model listens, and **the audio is deleted straight away**: only the verdict is kept. The first time takes about 40 minutes for 300 likes; after that only new likes. SoundCloud Go+ tracks can only be heard as a 30-second preview. The model is [Discogs-EffNet](https://essentia.upf.edu/models.html) from the Music Technology Group in Barcelona (downloaded once, 18 MB).
 - Open **Your genre lists** to see every list. A **?** marks a guess: hover over it to see why.
 - Wrong list? Pick the right one in the menu next to the track. djnext remembers your choice.
 - **Send genre lists to rekordbox** (rekordbox closed) adds each list as a playlist in a **djnext genres** folder. Sending again refreshes them.
@@ -26,7 +28,7 @@ Your likes are sorted into **Groovy techno, Tech house, House, Indie dance & mel
 
 **A different set every time:** press **Make another** for a new one. djnext remembers your last 3 sets for each genre and avoids repeating the same changes from one track to the next, so the crowd hears a different set. Hot tracks can come back; other tracks from your last set step aside a little. The mixing rules never bend for variety.
 
-Each track shows its tempo and key, **why it follows the track before** (for example *real DJs played it straight after this twice*, or *you've mixed these before*), and the **hot cues** it will get.
+Each track shows its tempo and key, **why it follows the track before** (for example *real DJs played it straight after this twice*, or *same groove & sound*), and the **hot cues** it will get.
 
 ## Change a pick
 - **Other options:** shows the next-best tracks for that spot. They mix well after the track before and into the track after. Press **Use this** to swap one in.
@@ -44,13 +46,13 @@ Under every track in a playlist, **Fits after this, not in your likes ▾** list
 2. Give the playlist a name if you like, and press **Send to rekordbox with hot cues**.
 3. Open rekordbox. The playlist is under **Playlists → djnext** (rekordbox's own Playlists, not the SoundCloud section).
 
-Your hot cue pads are set up for each change: **E** = cue the incoming track here, **F** = swap the basses here, **G** = start the next track here. Your own hot cues are never changed: if a pad is already used, djnext uses a free one.
+Your hot cue pads are set up for each change: **E** = cue the incoming track here, **F** = swap the basses here (where its bass comes in), **G** = start the next track here (once this one's last big part is over). The cues follow how each track actually sounds, from rekordbox's own 3-band waveform. Your own hot cues are never changed: if a pad is already used, djnext uses a free one.
 
 ## How it picks
 For every "this track, then that one" djnext checks, in this order:
 1. **Can it be mixed smoothly?** Tempo within 5% and a compatible key (same key, one step on the Camelot wheel, or the relative major/minor). Anything else is never picked.
 2. **Has it been tested?** Professional DJs played them back to back (MixesDB tracklists). What you played before is never used.
-3. **Same groove?** The two tracks turn up in the same DJ sets, or DJs who play one also play the other's artist.
+3. **Same groove?** djnext listened to both and they feel alike (groove, texture), the two tracks turn up in the same DJ sets, or DJs who play one also play the other's artist.
 4. **Clean blend?** A long intro to lay over the outro is preferred (from rekordbox's phrase analysis).
 5. **Is it hot right now?** 🔥 Tracks with lots of plays on SoundCloud (especially recent ones) and lots of professional DJ sets this year get a bonus. djnext checks the play counts once a week in the background.
 6. **Does it keep the flow?** Small tempo steps that climb rather than jump around, energy following the shape you picked, never the same artist (or remixer) twice in a row, and a mix of tunes the crowd knows and deeper cuts.
@@ -62,13 +64,14 @@ For every "this track, then that one" djnext checks, in this order:
 
 ## Updating and removing
 - **Getting an update:** djnext checks for a new version each time it opens. When there is one, a green bar says so: press **Update now**. djnext downloads it, closes and opens again by itself (about a minute); your lists and settings stay. You can also press **Check for updates** at the bottom of the page. (ZIP version: **Update now** fetches the newest code; then close djnext and open it again.)
-- **Stays up to date by itself:** each time djnext opens, it fetches your SoundCloud likes again (if the last time was over a day ago) and looks up new tracks in DJ tracklists in the background.
-- **Where your data is:** Mac app: `~/Library/Application Support/djnext`. ZIP version: the `data` folder. It holds your SoundCloud likes list, the DJ-tracklist cache, your genre choices, the tracks you said not to use, and backups. Updating never touches it.
+- **Stays up to date by itself:** each time djnext opens, it fetches your SoundCloud likes again (if the last time was over a day ago) looks up new tracks in DJ tracklists, and listens to new likes, all in the background.
+- **Where your data is:** Mac app: `~/Library/Application Support/djnext`. ZIP version: the `data` folder. It holds your SoundCloud likes list, what djnext heard in each track (`listened.json`, no audio), the DJ-tracklist cache, your genre choices, the tracks you said not to use, and backups. Updating never touches it.
 - **Removing djnext:** Mac app: drag it from Applications to the Bin, and delete that `djnext` folder. ZIP version: delete the folder.
 
 ## Disclaimer
 djnext is an independent hobby project, **not affiliated with or endorsed by** Pioneer DJ, AlphaTheta, rekordbox, SoundCloud or MixesDB.
 - It reads your rekordbox library directly, and when you press Send it writes a playlist and hot cues into rekordbox's library. rekordbox must be closed for that, and every change is backed up first. Still, use it **at your own risk**, and keep your own rekordbox backups too (rekordbox: File → Library → Backup Library).
-- SoundCloud is read through public pages with [yt-dlp](https://github.com/yt-dlp/yt-dlp): the list of your likes only. **No audio is downloaded.**
+- SoundCloud is read through public pages with [yt-dlp](https://github.com/yt-dlp/yt-dlp): the list of your likes, their play counts, and each track streamed once so djnext can listen to it. **No audio is kept**: each stream is deleted as soon as it's been heard.
+- The listening model (Discogs-EffNet, Music Technology Group, Universitat Pompeu Fabra) is free for non-commercial use (CC BY-NC-ND 4.0).
 - **Find DJ pairs** sends the artist and title of each of your likes to MixesDB's public search, one request per second.
 - Licence: MIT (see [LICENSE](LICENSE)).

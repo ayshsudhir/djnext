@@ -40,6 +40,7 @@ rm -rf "$DIST/djnext.app"
   --collect-data djnext \
   --collect-all pyrekordbox --collect-all sqlcipher3 \
   --collect-submodules yt_dlp --collect-all webview \
+  --collect-all essentia --collect-all onnxruntime \
   --hidden-import uvicorn.logging --hidden-import uvicorn.loops.auto \
   --hidden-import uvicorn.protocols.http.auto --hidden-import uvicorn.lifespan.on \
   packaging/mac/launcher.py

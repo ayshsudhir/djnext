@@ -43,6 +43,29 @@ class Evidence:
     blocked: Set[Tuple[str, str]] = field(default_factory=set)  # transitions you said don't work
     hot: Dict[str, float] = field(default_factory=dict)  # track id -> 0..1 how hot right now (core/popularity.py)
     hot_why: Dict[str, str] = field(default_factory=dict)
+    sound: Dict[str, object] = field(default_factory=dict)  # track id -> unit sound fingerprint (ingest/listen.py)
+    sound_scale: Tuple[float, float] = (0.0, 1.0)  # typical and "very alike" similarity within your likes
+
+    def alike(self, a: str, b: str) -> Optional[float]:
+        """How alike two tracks sound (groove, texture): about -1 (unlike your usual pairs) .. 1+ (very alike)."""
+        va, vb = self.sound.get(a), self.sound.get(b)
+        if va is None or vb is None:
+            return None
+        mid, high = self.sound_scale
+        sim = float(va @ vb)
+        return max(-1.0, min(1.2, (sim - mid) / max(1e-6, high - mid)))
+
+    def set_sound(self, sound: Dict[str, object]) -> None:
+        """Fingerprints, and what 'typical' and 'very alike' mean among them (median and 90th percentile)."""
+        import numpy as np
+
+        self.sound = dict(sound)
+        ids = list(self.sound)
+        if len(ids) < 3:
+            return
+        m = np.stack([self.sound[i] for i in ids])
+        sims = (m @ m.T)[np.triu_indices(len(ids), 1)]
+        self.sound_scale = (float(np.median(sims)), float(np.percentile(sims, 90)))
 
     @classmethod
     def build(cls, dj=None, blocked: Iterable[Tuple[str, str]] = (), hot: Optional[Dict[str, float]] = None,
@@ -190,6 +213,12 @@ def move(a: Track, b: Track, ev: Evidence) -> Move:
             detail = ev.hot_why.get(b.id, "")
             tested.append((parts["hot"] - 1.0, "🔥 hot right now" + (f" ({detail})" if detail else "")))
 
+    al = ev.alike(a.id, b.id)
+    if al is not None:
+        parts["sounds_alike"] = SOUND_WEIGHT * al
+        if al >= 0.8:
+            tested.append((parts["sounds_alike"] - 0.5, "same groove & sound (djnext listened to both)"))
+
     ib, oa = intro_bars(b), outro_bars(a)
     blend: Optional[str] = None
     if ib is not None:
@@ -285,6 +314,7 @@ def _flow_penalty(seq: Sequence[Track], b: Track, energy: Dict[str, float], i: i
     return p
 
 
+SOUND_WEIGHT = 1.5  # how much "sounds alike" (groove, texture) counts; a 2-set DJ pair counts 4.8
 VARIETY = 0.6  # how much chance mixes up close calls (score points); 0 = always the same playlist
 
 

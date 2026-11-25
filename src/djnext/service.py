@@ -95,8 +95,12 @@ def set_genre(track_id: str, genre: Optional[str]) -> None:
 
 def sort_by_genre(pool: List[Track], store: Optional[mixesdb.Store] = None) -> Dict[str, genres.Verdict]:
     store = store or mixesdb.Store.load()
+    from .ingest import listen
+
     cats = {t.id: [store.categories.get(st, []) for st in store.tracks.get(t.id, {}).get("sets", [])] for t in pool}
-    return genres.sort_likes(pool, cats, genre_overrides())
+    ears = listen.load()
+    heard = {t.id: listen.styles_of(ears.get(t.soundcloud_id or "")) for t in pool}
+    return genres.sort_likes(pool, cats, genre_overrides(), {k: v for k, v in heard.items() if v})
 
 
 def genre_lists(pool: List[Track], verdicts: Dict[str, genres.Verdict]) -> Dict[str, List[Track]]:
@@ -122,8 +126,14 @@ def evidence(lib: Library, pool: List[Track]) -> picker.Evidence:
 
     dj = mixesdb.pairs(pool, mixesdb.Store.load())
     blocked = [tuple(p) for p in read_settings().get("blocked_pairs") or []]
+    from .ingest import listen
+
     hot, why = hotness(pool, sc_stats.load(), dj.recent_plays)
-    return picker.Evidence.build(dj, blocked, hot, why)
+    ev = picker.Evidence.build(dj, blocked, hot, why)
+    ears = listen.load()
+    sound = {t.id: listen.sound_of(ears.get(t.soundcloud_id or "")) for t in pool}
+    ev.set_sound({k: v for k, v in sound.items() if v is not None})
+    return ev
 
 
 # ---------- a different playlist every time ----------

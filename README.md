@@ -3,7 +3,7 @@
 **The next track, from your own SoundCloud likes, so the dance floor never stops.** djnext sorts your likes into genre lists (groovy techno, tech house, house, indie dance & melodic, hard & fast…), picks a playlist from the one you choose where every track mixes cleanly into the next, and puts it in rekordbox with your hot cues already set.
 
 - 🎯 **Only your likes:** it never suggests a track you haven't liked on SoundCloud.
-- 🗂️ **Genre lists:** your likes sorted by the genres of the DJ sets they're played in, their tags and tempo. Move any track yourself, and send the lists to rekordbox as playlists.
+- 🗂️ **Genre lists:** djnext listens to each like once (streamed, audio deleted straight after) and sorts them by how they sound, the artist, and the DJ sets they're played in. Move any track yourself, and send the lists to rekordbox as playlists.
 - 🔗 **Tested pairs first:** tracks professional DJs have played back to back (from public DJ tracklists) come first. Your own past sets are not used.
 - 🎚️ **Smooth flow:** tempo within 5%, compatible keys, long intros to blend over, never the same artist twice in a row.
 - 💿 **Straight into rekordbox:** one button adds the playlist with hot cues on your pads: where to cue in, where to swap the bass, when to start the next track.
@@ -115,7 +115,10 @@ pytest
 - **Library:** rekordbox's own database, read from a temporary **copy** (the real one is only written when you press Send, with rekordbox closed and a backup first). That gives tempo, key and phrase analysis (your play history is not used).
 - **Your likes:** read from your public SoundCloud likes page with yt-dlp (track list only) and matched to rekordbox's streamed SoundCloud tracks by id (`src/djnext/ingest/soundcloud.py`).
 - **The pool:** likes that are analysed and are real tracks (2–15 min), one upload per song (`core/picker.py: pool`).
-- **Genre lists:** `core/genres.py` adds up three clues: the MixesDB categories of the DJ sets a track was found in (Tech House, Techno, Deep House…, fetched 50 sets per request), the genre tag, and the tempo. Low-confidence tracks then follow their artist's or label's confident tracks. Your manual moves are saved in `data/settings.json` and always win.
+- **Listening:** `ingest/listen.py` streams each like once into a temp folder (yt-dlp), runs the [Discogs-EffNet](https://essentia.upf.edu/models.html) model (Essentia + ONNX Runtime, 400 Discogs styles) over the whole track, and deletes the audio. Kept in `data/listened.json`: the top styles and a 1280-number sound fingerprint (float16). The model (CC BY-NC-ND 4.0) is downloaded once into `data/models`.
+- **Genre lists:** `core/genres.py` adds up the clues: what the model heard (strongest), what the artist's other tracks sound like, the MixesDB categories of the DJ sets a track was found in, the genre tag, and tempo only to split techno from hard & fast. Your manual moves are saved in `data/settings.json` and always win.
+- **Sounds alike:** the picker adds a bonus for consecutive tracks whose sound fingerprints are close (scaled against the typical pair in your likes).
+- **Hot cues:** placed from rekordbox's phrase analysis plus its 3-band waveform (PWV6): the swap goes where the bass comes in, and a track is left only after its last loud part.
 - **DJ pairs:** each track is searched on [MixesDB](https://www.mixesdb.com)'s public API, and the tracklists that contain it are cached in `data/mixesdb.json` (`ingest/mixesdb.py`). A line only counts as the same track when the title **and** an artist or remixer match (`core/names.py`). That way "Cloonee - XTC" isn't confused with "Dan Molinari - XTC".
 - **One move (A → B):** `core/picker.py: move` scores tempo, key, DJ back-to-back pairs, same-set and same-scene links, and intro length, and keeps a short list of reasons for the screen. `mixable` is the hard gate: within 5% tempo and at most one Camelot step.
 - **The playlist:** a beam search over moves (`build`) plus flow rules: an energy shape, tempo that climbs rather than saw-tooths, no shared artist or remixer back to back, and a balance of well-known and deeper tracks.
